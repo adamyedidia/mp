@@ -2,8 +2,9 @@ import socket
 from _thread import *
 import pickle
 from game import Game
+from settings import SERVER
 
-server = "10.11.250.207"
+server = SERVER
 port = 5555
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -44,7 +45,8 @@ def threaded_client(conn, p, gameId):
                     conn.sendall(pickle.dumps(game))
             else:
                 break
-        except:
+        except Exception as e:
+            print(f"Exception handling threaded client: {e}")
             break
 
     print("Lost connection")
@@ -57,20 +59,20 @@ def threaded_client(conn, p, gameId):
     conn.close()
 
 
+if __name__ == '__main__':
+    while True:
+        conn, addr = s.accept()
+        print("Connected to:", addr)
 
-while True:
-    conn, addr = s.accept()
-    print("Connected to:", addr)
-
-    idCount += 1
-    p = 0
-    gameId = (idCount - 1)//2
-    if idCount % 2 == 1:
-        games[gameId] = Game(gameId)
-        print("Creating a new game...")
-    else:
-        games[gameId].ready = True
-        p = 1
+        idCount += 1
+        p = 0
+        gameId = (idCount - 1)//2
+        if idCount % 2 == 1:
+            games[gameId] = Game(gameId)
+            print("Creating a new game...")
+        else:
+            games[gameId].ready = True
+            p = 1
 
 
-    start_new_thread(threaded_client, (conn, p, gameId))
+        start_new_thread(threaded_client, (conn, p, gameId))

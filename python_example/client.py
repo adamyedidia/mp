@@ -83,8 +83,9 @@ def redrawWindow(win, game, p):
 
 btns = [Button("Rock", 50, 500, (0,0,0)), Button("Scissors", 250, 500, (255,0,0)), Button("Paper", 450, 500, (0,255,0))]
 def main():
-    run = True
+    run = False
     clock = pygame.time.Clock()
+    from IPython import embed; embed()
     n = Network()
     player = int(n.getP())
     print("You are player", player)
@@ -159,5 +160,6 @@ def menu_screen():
 
     main()
 
-while True:
-    menu_screen()
+if __name__ == '__main__':
+    while True:
+        menu_screen()
