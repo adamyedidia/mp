@@ -1,24 +1,28 @@
 from settings import PORT, SERVER
 import socket
 from typing import Any
-from redis_utils import rset, rget, redis_lock, flushall
+from redis_utils import rset, rget, redis_lock, flushall, rlisten
 import gevent
 from _thread import start_new_thread
+from time import sleep
 
 _CLICK_COUNTER_REDIS_KEY = 'click_counter'
 
-class Connection():
+def _send(conn: Any, message: str) -> None:
+    conn.sendall(bytes(message, 'utf-8'))
+
+
+class Connection:
     def __init__(self, id: int, conn: Any, addr: tuple[str, int]) -> None:
         self.id = id
         self.conn = conn
         self.addr = addr
 
-
     def __repr__(self) -> str:
         return f"<Connection {self.id}: {self.addr}>"
 
 
-class Game():
+class Game:
     def get_num_clicks(self) -> int:
         return int(rget(_CLICK_COUNTER_REDIS_KEY) or '0')
 
@@ -39,13 +43,19 @@ def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> i
     return 0
 
 
-def handle_connection(connection: Connection, game: Game) -> None:
-    print('handling connection!')
-    connection.conn.send(b'hello!')
+def _handle_incoming_connection(connection: Connection, game: Game) -> None:
+    print('handling incoming connection!')
     while True:
         data = connection.conn.recv(4096).decode()
         print(data)
         game.handle_data_from_client(data)
+
+
+def _handle_outgoing_connection(connection: Connection, game: Game) -> None:
+    def _handle_click_counter_change(value: str) -> None:
+        _send(connection.conn, f'num_clicks:{value or 0}')
+
+    rlisten(_CLICK_COUNTER_REDIS_KEY, _handle_click_counter_change)
 
 
 def main() -> None:
@@ -64,7 +74,14 @@ def main() -> None:
             connection = Connection(new_connection_id, conn, addr)
             active_connections_by_id[new_connection_id] = connection
             
-            start_new_thread(handle_connection, (connection, game))
+            sleep(0.01)
+            _send(conn, f'client_id:{new_connection_id}')
+            sleep(0.001)
+            print(f'Startup value: {rget(_CLICK_COUNTER_REDIS_KEY) or 0}')
+            _send(conn, f'num_clicks:{rget(_CLICK_COUNTER_REDIS_KEY) or 0}')
+
+            start_new_thread(_handle_incoming_connection, (connection, game))
+            start_new_thread(_handle_outgoing_connection, (connection, game))
 
             print(f'New connection: {connection}')
     except BaseException as e:
