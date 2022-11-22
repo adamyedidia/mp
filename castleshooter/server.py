@@ -19,7 +19,6 @@ class Connection():
 
 
 class Game():
-
     def get_num_clicks(self) -> int:
         return int(rget(_CLICK_COUNTER_REDIS_KEY) or '0')
 
