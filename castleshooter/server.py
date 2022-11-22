@@ -1,8 +1,11 @@
 from settings import PORT, SERVER
-from socket import socket
+import socket
 from typing import Any
-from redis_utils import rset, rget, redis_lock
+from redis_utils import rset, rget, redis_lock, flushall
+import gevent
+from _thread import start_new_thread
 
+_CLICK_COUNTER_REDIS_KEY = 'click_counter'
 
 class Connection():
     def __init__(self, id: int, conn: Any, addr: tuple[str, int]) -> None:
@@ -16,10 +19,9 @@ class Connection():
 
 
 class Game():
-    _CLICK_COUNTER_REDIS_KEY = 'click_counter'
 
     def get_num_clicks(self) -> int:
-        return int(rget(_CLICK_COUNTER_REDIS_KEY)) or 0
+        return int(rget(_CLICK_COUNTER_REDIS_KEY) or '0')
 
     def increment_num_clicks(self):
         num_clicks = self.get_num_clicks()
@@ -28,6 +30,7 @@ class Game():
 
     def handle_data_from_client(self, data: str):
         if data == 'click':
+            print('incrementing')
             self.increment_num_clicks()
             
 
@@ -38,29 +41,36 @@ def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> i
 
 
 def handle_connection(connection: Connection, game: Game) -> None:
+    print('handling connection!')
+    connection.conn.send(b'hello!')
     while True:
-        data = conn.recv(4096).decode()
+        data = connection.conn.recv(4096).decode()
+        print(data)
         game.handle_data_from_client(data)
 
 
 def main() -> None:
+    flushall()
     active_connections_by_id: dict[int, Connection] = {}
 
     game = Game()
-    s = socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((SERVER, PORT))
-    s.listen()
-    while True:
-        conn, addr = s.accept()
-        new_connection_id = _get_new_connection_id(active_connections_by_id)
-        connection = Connection(new_connection_id, conn, addr)
-        active_connections_by_id[new_connection_id] = connection
-        
-        gevent.spawn(handle_connection, connection, game)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind((SERVER, PORT))
+        s.listen()
+        print('Starting the server!')
+        while True:
+            conn, addr = s.accept()
+            new_connection_id = _get_new_connection_id(active_connections_by_id)
+            connection = Connection(new_connection_id, conn, addr)
+            active_connections_by_id[new_connection_id] = connection
+            
+            start_new_thread(handle_connection, (connection, game))
 
-        print(f'New connection: {connection}')
-
-
+            print(f'New connection: {connection}')
+    except BaseException as e:
+        print(f'Error: {e}. Closing the socket')
+        s.close()
 
 
 if __name__ == '__main__':
