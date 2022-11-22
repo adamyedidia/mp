@@ -1,1 +1,4 @@
 gevent==22.10.2
+ipython==8.6.0
+redis==4.3.4
+python-redis-lock==4.0.0
