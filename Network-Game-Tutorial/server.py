@@ -4,11 +4,10 @@ import sys
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-server = 'localhost'
+server = '73.126.96.231'
 port = 5555
 
 server_ip = socket.gethostbyname(server)
-print(server_ip)
 
 try:
     s.bind((server, port))
