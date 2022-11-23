@@ -1,10 +1,6 @@
-This project uses Python 3.11.
+This project uses Python 3.9.
 
 Can do `pip install -r requirements.txt`
-
-pygame needs to be installed separately, sadly:
-
-`pip install pygame --pre`
 
 You also need to get redis:
 
