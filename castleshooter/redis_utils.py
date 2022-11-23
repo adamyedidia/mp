@@ -7,7 +7,7 @@ import redis_lock as rl
 redis = r.Redis(connection_pool=r.ConnectionPool(host='localhost', port=6379, db=0))
 
 def _get_redis_key(key: str, client_id: Optional[int] = None) -> str:
-    prefix = f'client:{client_id}' if client_id else 'server'
+    prefix = f'client:{client_id}' if client_id is not None else 'server'
     return f'{prefix}:{key}'
 
 
