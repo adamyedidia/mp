@@ -56,9 +56,9 @@ def client_main() -> None:
 
         font = pygame.font.SysFont("comicsans", 30)
         win.fill((255, 255, 255))
-        text = font.render("Click this window!", 1, (255,0,0))
+        text = font.render("Click this window!", True, (255,0,0))
         win.blit(text, (100,200))
-        num_clicks_text = font.render(f"Number of clicks so far: {num_clicks}", 1, (255,0,0))
+        num_clicks_text = font.render(f"Number of clicks so far: {num_clicks}", True, (255,0,0))
         win.blit(num_clicks_text, (100, 300))
         pygame.display.update()
         for event in pygame.event.get():
