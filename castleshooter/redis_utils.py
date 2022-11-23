@@ -11,7 +11,7 @@ def _get_redis_key(key: str, client_id: Optional[int] = None) -> str:
     return f'{prefix}:{key}'
 
 
-def rset(key: str, value: Any, client_id: Optional[int] = None) -> bool:
+def rset(key: str, value: Any, client_id: Optional[int] = None) -> Optional[bool]:
     redis_key = _get_redis_key(key, client_id=client_id)
     redis.publish(redis_key, str(value))
     return redis.set(_get_redis_key(key, client_id=client_id), str(value))
