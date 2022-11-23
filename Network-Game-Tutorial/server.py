@@ -8,6 +8,7 @@ server = 'localhost'
 port = 5555
 
 server_ip = socket.gethostbyname(server)
+print(server_ip)
 
 try:
     s.bind((server, port))
