@@ -23,8 +23,8 @@ def rget(key: str, client_id: Optional[int] = None) -> Optional[str]:
             else None)
 
 
-def rlisten(key: str, callback: Callable[Optional[str], None], 
-            client_id: Optional[int] = None) -> bool:
+def rlisten(key: str, callback: Callable[[Optional[str]], None], 
+            client_id: Optional[int] = None) -> None:
     pubsub = redis.pubsub()
     pubsub.subscribe(_get_redis_key(key, client_id=client_id))
     for item in pubsub.listen():

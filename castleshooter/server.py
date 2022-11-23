@@ -1,6 +1,6 @@
 from settings import PORT, SERVER
 import socket
-from typing import Any
+from typing import Any, Optional
 from redis_utils import rset, rget, redis_lock, flushall, rlisten
 import gevent
 from _thread import start_new_thread
@@ -52,7 +52,7 @@ def _handle_incoming_connection(connection: Connection, game: Game) -> None:
 
 
 def _handle_outgoing_connection(connection: Connection, game: Game) -> None:
-    def _handle_click_counter_change(value: str) -> None:
+    def _handle_click_counter_change(value: Optional[str]) -> None:
         _send(connection.conn, f'num_clicks:{value or 0}')
 
     rlisten(_CLICK_COUNTER_REDIS_KEY, _handle_click_counter_change)
