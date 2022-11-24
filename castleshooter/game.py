@@ -1,60 +1,14 @@
 from socket import socket
 import pygame
 from pygame import Color
+
 from client import Client
 from redis_utils import rget
 
-
-class Canvas:
-
-    def __init__(self, w: int, h: int, name: str="None"):
-        self.width = w
-        self.height = h
-        self.screen: pygame.surface.Surface = pygame.display.set_mode((w,h))
-        pygame.display.set_caption(name)
-
-    @staticmethod
-    def update():
-        pygame.display.update()
-
-    def get_canvas(self):
-        return self.screen
-
-    def draw_background(self):
-        self.screen.fill((255,255,255))
-
-
-class Player():
-    width = height = 50
-
-    def __init__(self, startx: int, starty: int, color: Color=Color(255, 0, 0)):
-        self.x = startx
-        self.y = starty
-        self.velocity: int = 2
-        self.color = color
-
-    def draw(self, g: pygame.surface.Surface):
-        pygame.draw.rect(g, self.color ,(self.x, self.y, self.width, self.height), 0)
-
-    def move(self, input: int) -> None:
-        if input == pygame.K_RIGHT:
-            self.x += self.velocity
-        elif input == pygame.K_LEFT:
-            self.x -= self.velocity
-        elif input == pygame.K_UP:
-            self.y -= self.velocity
-        elif input == pygame.K_DOWN:
-            self.y += self.velocity
-
-    def make_valid_position(self, w: int, h: int) -> None:
-        self.x = max(0, self.x)
-        self.x = min(w-self.width, self.x)
-        self.y = max(0, self.y)
-        self.y = min(h-self.height, self.y)
-
+from player import Player
+from canvas import Canvas
 
 class Game:
-
     def __init__(self, w: int, h: int, client: Client, socket: socket):
         self.width = w
         self.height = h
