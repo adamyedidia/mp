@@ -6,7 +6,6 @@ import gevent
 from _thread import start_new_thread
 from time import sleep
 
-_CLICK_COUNTER_REDIS_KEY = 'click_counter'
 
 def _send(conn: Any, message: str) -> None:
     conn.sendall(bytes(message, 'utf-8'))
@@ -22,19 +21,24 @@ class Connection:
         return f"<Connection {self.id}: {self.addr}>"
 
 
-class Game:
-    def get_num_clicks(self) -> int:
-        return int(rget(_CLICK_COUNTER_REDIS_KEY) or '0')
+class GameState:
+    def set_active_players(self, active_connections_by_id: dict):
+        client_ids = active_connections_by_id.keys()
+        print(f'client_ids: {client_ids}')
+        rset('active_players', ','.join(str(i) for i in client_ids))
 
-    def increment_num_clicks(self):
-        num_clicks = self.get_num_clicks()
-        with redis_lock('click_counter_lock'):
-            rset(_CLICK_COUNTER_REDIS_KEY, num_clicks + 1)
+    def get_active_players(self) -> list[int]:
+        active_players = rget('active_players') or ''
+        return [int(i) for i in active_players.split(',')]
+
+    def get_player_state(self, player_number: int) -> Optional[str]:
+        return rget(f'player_state_{player_number}')
 
     def handle_data_from_client(self, data: str):
-        if data == 'click':
-            print('incrementing')
-            self.increment_num_clicks()
+        if data.startswith('player_state'):
+            print(f'recieved: {data}')
+            key, data = data.split(':')
+            rset(key, data)
             
 
 def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> int:
@@ -43,26 +47,37 @@ def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> i
     return 0
 
 
-def _handle_incoming_connection(connection: Connection, game: Game) -> None:
+def _handle_incoming_connection(connection: Connection, game_state: GameState) -> None:
     print('handling incoming connection!')
     while True:
         data = connection.conn.recv(4096).decode()
         print(data)
-        game.handle_data_from_client(data)
+        game_state.handle_data_from_client(data)
 
 
-def _handle_outgoing_connection(connection: Connection, game: Game) -> None:
-    def _handle_click_counter_change(value: Optional[str]) -> None:
-        _send(connection.conn, f'num_clicks:{value or 0}')
+def _handle_outgoing_active_players_connection(connection: Connection) -> None:
+    def _handle_active_players_change(value: Optional[str]) -> None:
+        _send(connection.conn, f'active_players:{value}')
 
-    rlisten(_CLICK_COUNTER_REDIS_KEY, _handle_click_counter_change)
+    rlisten('active_players', _handle_active_players_change)
+
+
+def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
+    while True:
+        active_players = game_state.get_active_players()
+        for p in active_players:
+            player_state = game_state.get_player_state(p)
+            if player_state is not None:
+                _send(connection.conn, f'player_state_{p}:{player_state}')
+            sleep(.01)
+        sleep(.01)
 
 
 def main() -> None:
     flushall()
     active_connections_by_id: dict[int, Connection] = {}
 
-    game = Game()
+    game_state = GameState()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print(socket.gethostname())
     try:
@@ -74,15 +89,15 @@ def main() -> None:
             new_connection_id = _get_new_connection_id(active_connections_by_id)
             connection = Connection(new_connection_id, conn, addr)
             active_connections_by_id[new_connection_id] = connection
+            game_state.set_active_players(active_connections_by_id)
             
             sleep(0.01)
             _send(conn, f'client_id:{new_connection_id}')
             sleep(0.001)
-            print(f'Startup value: {rget(_CLICK_COUNTER_REDIS_KEY) or 0}')
-            _send(conn, f'num_clicks:{rget(_CLICK_COUNTER_REDIS_KEY) or 0}')
 
-            start_new_thread(_handle_incoming_connection, (connection, game))
-            start_new_thread(_handle_outgoing_connection, (connection, game))
+            start_new_thread(_handle_incoming_connection, (connection, game_state))
+            start_new_thread(_handle_outgoing_active_players_connection, (connection,))
+            start_new_thread(_handle_outgoing_player_state_connection, (connection, game_state))
 
             print(f'New connection: {connection}')
     except BaseException as e:
