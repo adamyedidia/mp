@@ -57,10 +57,10 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState) -
 
 
 def _handle_outgoing_active_players_connection(connection: Connection) -> None:
-    def _handle_active_players_change(value: Optional[str]) -> None:
+    def _handle_active_players_change(channel: str, value: Optional[str]) -> None:
         _send(connection.conn, f'active_players:{value};')
 
-    rlisten('active_players', _handle_active_players_change)
+    rlisten(['active_players'], _handle_active_players_change)
 
 
 def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:

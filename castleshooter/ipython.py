@@ -1,6 +1,6 @@
 from settings import *
 from IPython import embed
-from redis_utils import redis, rget, rset, redis_lock
+from redis_utils import redis, rget, rset, redis_lock, rlisten
 from time import sleep
 
 def example_lock_func(key):
