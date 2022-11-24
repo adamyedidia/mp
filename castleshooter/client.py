@@ -1,13 +1,13 @@
 import game
 from settings import PORT, SERVER
 import socket
-from typing import Any
+from typing import Any, Optional
 from redis_utils import rset, rget, redis_lock    
 from _thread import start_new_thread
 
 class Client:
     def __init__(self) -> None:
-        self.id = None
+        self.id: Optional[int] = None
 
     def set_id(self, id: int) -> None:
         self.id = id
