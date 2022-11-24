@@ -9,9 +9,9 @@ class Player():
         self.width = 50
         self.height = 50
 
-        self.healthbar = HealthBar()
-        self.item = Sword()
-        
+        self.healthbar: HealthBar = HealthBar()
+        self.item: Item = Sword()
+
         self.velocity: int = 2
         self.color = color
 
