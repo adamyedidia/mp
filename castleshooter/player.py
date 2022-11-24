@@ -1,6 +1,6 @@
 import pygame
 from pygame import Color
-from item import *
+from item import Item, Sword
 
 class Player():
     def __init__(self, startx: int, starty: int, color: Color=Color(255, 0, 0)):
