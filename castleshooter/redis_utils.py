@@ -6,9 +6,28 @@ import redis_lock as rl
 
 redis = r.Redis(connection_pool=r.ConnectionPool(host='localhost', port=6379, db=0))
 
+def _get_redis_key_prefix(client_id: Optional[int] = None) -> str:
+    return f'client:{client_id}' if client_id is not None else 'server'
+
+
 def _get_redis_key(key: str, client_id: Optional[int] = None) -> str:
-    prefix = f'client:{client_id}' if client_id is not None else 'server'
+    prefix = _get_redis_key_prefix(client_id=client_id)
     return f'{prefix}:{key}'
+
+
+def _get_redis_key_inverse(redis_key: str, client_id: Optional[int] = None) -> str:
+    prefix = _get_redis_key_prefix(client_id=client_id)
+    assert redis_key.startswith(prefix)
+    return redis_key[len(prefix) + 1:]
+
+
+def _to_optional_str(val: Any) -> Optional[str]:
+    if isinstance(val, bytes):
+        return val.decode()
+    elif val is None:
+        return None
+    else:
+        return str(val)
 
 
 def rset(key: str, value: Any, client_id: Optional[int] = None) -> Optional[bool]:
@@ -23,20 +42,19 @@ def rget(key: str, client_id: Optional[int] = None) -> Optional[str]:
             else None)
 
 
-def rlisten(key: str, callback: Callable[[Optional[str]], None], 
+def rlisten(keys: list[str], callback: Callable[[str, Optional[str]], None], 
             client_id: Optional[int] = None) -> None:
     pubsub = redis.pubsub()
-    pubsub.subscribe(_get_redis_key(key, client_id=client_id))
+    for key in keys:
+        pubsub.subscribe(_get_redis_key(key, client_id=client_id))
     for item in pubsub.listen():
         print(item)
         if item['type'] == 'message':
-            data = item['data']
-            if isinstance(data, bytes):
-                callback(data.decode())
-            elif data is None:
-                callback(None)
-            else:
-                callback(str(data))
+            raw_channel = _to_optional_str(item['channel'])
+            assert raw_channel is not None
+            channel = _get_redis_key_inverse(raw_channel, client_id=client_id)
+            data = _to_optional_str(item['data'])
+            callback(channel, data)
 
 
 def flushall() -> None:
