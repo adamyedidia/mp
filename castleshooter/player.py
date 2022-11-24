@@ -1,5 +1,6 @@
 import pygame
 from pygame import Color
+import json
 from item import Item, Sword
 
 class Player():
@@ -36,6 +37,21 @@ class Player():
         self.y = max(0, self.y)
         self.y = min(h-self.height, self.y)
 
+    def to_json(self):
+        return json.dumps({
+            'x': self.x,
+            'y': self.y,
+            'healthbar': self.healthbar.to_json(),
+            # 'item': self.item.to_json(),
+        })
+
+    def from_json(self, j: str):
+        d: dict = json.loads(j)
+        self.x = d['x']
+        self.y = d['y']
+        self.healthbar.from_json(d['healthbar'])
+        # self.item.from_json(d['item'])  # TODO: fix this
+
 
 class HealthBar():
     def __init__(self, hp: int = 2):
@@ -60,4 +76,14 @@ class HealthBar():
 
     def heal(self):
         self.hp = min(2, self.hp + 1)
+        self.update_color()
+
+    def to_json(self):
+        return json.dumps({
+            'hp': self.hp,
+        })
+    
+    def from_json(self, j: str):
+        d: dict = json.loads(j)
+        self.hp = d['hp']
         self.update_color()

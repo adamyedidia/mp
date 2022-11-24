@@ -21,14 +21,14 @@ def listen_for_server_updates(socket: Any) -> None:
         raw_data = socket.recv(1024).decode()
         print(f'Received message: {raw_data}')
         for datum in raw_data.split(';'):
-            if datum.startswith('client_id:') and client.id is None:
-                _, raw_client_id = datum.split(':')
+            if datum.startswith('client_id|') and client.id is None:
+                _, raw_client_id = datum.split('|')
                 client.set_id(int(raw_client_id))
-            if datum.startswith('active_players:'):
-                key, data = datum.split(':')
+            if datum.startswith('active_players|'):
+                key, data = datum.split('|')
                 rset(f'client_{key}', data)
             if datum.startswith('player_state_'):
-                key, data = datum.split(':')
+                key, data = datum.split('|')
                 rset(f'client_{key}', data)
 
 
