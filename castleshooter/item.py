@@ -1,5 +1,7 @@
+from typing import TYPE_CHECKING
 import pygame
-from player import Player
+if TYPE_CHECKING:
+    from player import Player
 
 
 class Item():
@@ -9,7 +11,7 @@ class Item():
     def draw(self, g: pygame.surface.Surface, x, y):
         pass
 
-    def use(self, using_player: Player, effected_players: list[Player]):
+    def use(self, using_player: 'Player', affected_players: list['Player']):
         pass
 
     def hit_box(self):
@@ -27,7 +29,7 @@ class Sword(Item):
         pygame.draw.rect(g, (0,0,0), (x+30, y+30, 15, 5))
         pygame.draw.rect(g, (0,0,0), (x+35, y+15, 5, 27))
 
-    def use(self, using_player: Player, effected_players: list[Player]):
+    def use(self, using_player: 'Player', affected_players: list['Player']):
         using_player.item = Item()
-        for damaged_player in effected_players:
+        for damaged_player in affected_players:
             damaged_player.healthbar.damage()
