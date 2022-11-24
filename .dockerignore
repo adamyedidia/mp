@@ -1,0 +1,6 @@
+# flyctl launch added from .gitignore
+# Byte-compiled / optimized / DLL files
+**/__pycache__
+**/**/__pycache__
+**/*.py[cod]
+**/*local_settings.py
