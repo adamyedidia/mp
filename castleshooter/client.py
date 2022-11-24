@@ -18,17 +18,18 @@ client = Client()
 
 def listen_for_server_updates(socket: Any) -> None:
     while True:
-        data = socket.recv(1024).decode()
-        print(f'Received message: {data}')
-        if data.startswith('client_id:') and client.id is None:
-            _, raw_client_id = data.split(':')
-            client.set_id(int(raw_client_id))
-        if data.startswith('active_players:'):
-            key, data = data.split(':')
-            rset(f'client_{key}', data)
-        if data.startswith('player_state_'):
-            key, data = data.split(':')
-            rset(f'client_{key}', data)
+        raw_data = socket.recv(1024).decode()
+        print(f'Received message: {raw_data}')
+        for datum in raw_data.split(';'):
+            if datum.startswith('client_id:') and client.id is None:
+                _, raw_client_id = datum.split(':')
+                client.set_id(int(raw_client_id))
+            if datum.startswith('active_players:'):
+                key, data = datum.split(':')
+                rset(f'client_{key}', data)
+            if datum.startswith('player_state_'):
+                key, data = datum.split(':')
+                rset(f'client_{key}', data)
 
 
 def client_main() -> None:

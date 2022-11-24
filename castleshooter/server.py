@@ -34,11 +34,12 @@ class GameState:
     def get_player_state(self, player_number: int) -> Optional[str]:
         return rget(f'player_state_{player_number}')
 
-    def handle_data_from_client(self, data: str):
-        if data.startswith('player_state'):
-            print(f'recieved: {data}')
-            key, data = data.split(':')
-            rset(key, data)
+    def handle_data_from_client(self, raw_data: str):
+        for datum in raw_data.split(';'):
+            if datum.startswith('player_state'):
+                print(f'received: {datum}')
+                key, data = datum.split(':')
+                rset(key, data)
             
 
 def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> int:
@@ -57,7 +58,7 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState) -
 
 def _handle_outgoing_active_players_connection(connection: Connection) -> None:
     def _handle_active_players_change(value: Optional[str]) -> None:
-        _send(connection.conn, f'active_players:{value}')
+        _send(connection.conn, f'active_players:{value};')
 
     rlisten('active_players', _handle_active_players_change)
 
@@ -68,7 +69,7 @@ def _handle_outgoing_player_state_connection(connection: Connection, game_state:
         for p in active_players:
             player_state = game_state.get_player_state(p)
             if player_state is not None:
-                _send(connection.conn, f'player_state_{p}:{player_state}')
+                _send(connection.conn, f'player_state_{p}:{player_state};')
             sleep(.01)
         sleep(.01)
 
@@ -91,7 +92,7 @@ def main() -> None:
             game_state.set_active_players(active_connections_by_id)
             
             sleep(0.01)
-            _send(conn, f'client_id:{new_connection_id}')
+            _send(conn, f'client_id:{new_connection_id};')
             sleep(0.001)
 
             start_new_thread(_handle_incoming_connection, (connection, game_state))

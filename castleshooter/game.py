@@ -57,7 +57,7 @@ class Game:
         pygame.quit()
 
     def send_data(self) -> None:
-        data = f'player_state_{self.player_number}:{self.player.x},{self.player.y}'
+        data = f'player_state_{self.player_number}:{self.player.x},{self.player.y};'
         self.s.sendall(bytes(data, 'utf-8'))
 
     def update_from_server(self) -> None:
