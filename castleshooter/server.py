@@ -64,9 +64,8 @@ def main() -> None:
 
     game = Game()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print(socket.gethostname())
     try:
-        s.bind((socket.gethostname(), PORT))
+        s.bind((socket.gethostbyname(socket.gethostname()), PORT))
         s.listen()
         print('Starting the server!')
         while True:
