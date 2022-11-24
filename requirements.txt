@@ -3,3 +3,5 @@ ipython==8.6.0
 redis==4.3.4
 python-redis-lock==4.0.0
 pygame==2.1.2
+websockets==10.4
+asyncio==3.4.3
