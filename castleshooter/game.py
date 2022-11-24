@@ -15,7 +15,7 @@ class Game:
         self.client = client
         self.s = socket
         self.player_number = self.client.id if self.client.id is not None else -1
-        self.players = {}
+        self.players: dict[int, Player] = {}
         self.player = Player(50, 50)
         self.canvas = Canvas(self.width, self.height, "Testing...")
 
