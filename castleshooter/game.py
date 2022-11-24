@@ -57,7 +57,8 @@ class Game:
         pygame.quit()
 
     def send_data(self) -> None:
-        data = f'player_state_{self.player_number}:{self.player.x},{self.player.y};'
+        data = f'player_state_{self.player_number}|{self.player.to_json()};'
+        print(data)
         self.s.sendall(bytes(data, 'utf-8'))
 
     def update_from_server(self) -> None:
@@ -70,5 +71,4 @@ class Game:
                 self.players[p] = Player(50, 50, Color(0, 255, 255))
             player_state = rget(f'client_player_state_{p}')
             if player_state is not None:
-                state = [int(i) for i in player_state.split(',')]
-                self.players[p].x, self.players[p].y = state
+                self.players[p].from_json(player_state)
