@@ -4,32 +4,49 @@ import socket
 from typing import Any, Optional
 from redis_utils import rset, rget, redis_lock    
 from _thread import start_new_thread
-
-class Client:
-    def __init__(self) -> None:
-        self.id: Optional[int] = None
-
-    def set_id(self, id: int) -> None:
-        self.id = id
+from client_utils import client
+from packet import (
+    Packet, send_ack, send_without_retry, packet_ack_redis_key, packet_handled_redis_key
+)
 
 
-client = Client()
+def _handle_payload_from_server(payload: str) -> None:
+    if payload.startswith('client_id|') and client.id is None:
+        _, raw_client_id = payload.split('|')
+        client.set_id(int(raw_client_id))
+    if payload.startswith('active_players|'):
+        key, data = payload.split('|')
+        rset(f'client_{key}', data, client_id=client.id)
+    if payload.startswith('player_state_'):
+        key, data = payload.split('|')
+        rset(f'client_{key}', data, client_id=client.id)
 
 
 def listen_for_server_updates(socket: Any) -> None:
     while True:
-        raw_data = socket.recv(1024).decode()
-        print(f'Received message: {raw_data}')
+        raw_data = socket.recv(4096).decode()
         for datum in raw_data.split(';'):
-            if datum.startswith('client_id|') and client.id is None:
-                _, raw_client_id = datum.split('|')
-                client.set_id(int(raw_client_id))
-            if datum.startswith('active_players|'):
-                key, data = datum.split('|')
-                rset(f'client_{key}', data)
-            if datum.startswith('player_state_'):
-                key, data = datum.split('|')
-                rset(f'client_{key}', data)
+            print(f'received: {datum}')
+            packet = Packet.from_str(datum)
+            packet_id = packet.id
+            payload = packet.payload
+            if packet.is_ack:
+                assert packet_id is not None
+                # Record in redis that the message has been acked
+                rset(packet_ack_redis_key(packet_id), '1', client_id=client.id)
+            elif packet_id is None:
+                assert payload is not None
+                _handle_payload_from_server(payload)
+            else:
+                assert payload is not None
+                with redis_lock(f'handle_payload_from_server|{packet.id}'):
+                    handled_redis_key = packet_handled_redis_key(packet_id)
+                    # Want to make sure not to handle the same packet twice due to a re-send, 
+                    # if our ack didn't get through
+                    if not rget(handled_redis_key, client_id=client.id):
+                        _handle_payload_from_server(payload)
+                        send_ack(socket, packet_id)
+                        rset(handled_redis_key, '1', client_id=client.id)
 
 
 def client_main() -> None:
