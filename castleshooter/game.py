@@ -2,11 +2,13 @@ from socket import socket
 import pygame
 from pygame import Color
 
-from client import Client
 from redis_utils import rget
 
 from player import Player
 from canvas import Canvas
+from client_utils import Client, client
+
+from packet import send_without_retry
 
 class Game:
     def __init__(self, w: int, h: int, client: Client, socket: socket):
@@ -59,16 +61,16 @@ class Game:
     def send_data(self) -> None:
         data = f'player_state_{self.player_number}|{self.player.to_json()};'
         print(data)
-        self.s.sendall(bytes(data, 'utf-8'))
+        send_without_retry(self.s, data, client_id=client.id)
 
     def update_from_server(self) -> None:
-        active_players = rget('client_active_players')
+        active_players = rget('client_active_players', client_id=client.id)
         if not active_players:
             return
         player_numbers = [int(i) for i in active_players.split(',')]
         for p in player_numbers:
             if p not in self.players and p != self.player_number:
                 self.players[p] = Player(50, 50, Color(0, 255, 255))
-            player_state = rget(f'client_player_state_{p}')
+            player_state = rget(f'client_player_state_{p}', client_id=client.id)
             if player_state is not None:
                 self.players[p].from_json(player_state)
