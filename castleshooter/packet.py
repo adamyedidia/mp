@@ -49,7 +49,7 @@ def packet_ack_redis_key(packet_id: int) -> str:
 
 def packet_handled_redis_key(packet_id: int, for_client: Optional[int] = None) -> str:
     for_client_suffix = f'|{for_client}' if for_client is not None else ''
-    return f'packet_handled|{packet_id}{for_client}'
+    return f'packet_handled|{packet_id}{for_client_suffix}'
 
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
