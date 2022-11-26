@@ -93,7 +93,7 @@ def send_with_retry(conn: Any, message: str, client_id: Optional[int]) -> bool:
 
 def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> None:
     packet = Packet(client_id=client_id, payload=message)
-    print(f'Sending {packet}')    
+    print(f'Sending without retry {packet}')    
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
 
 
