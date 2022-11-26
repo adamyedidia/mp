@@ -38,6 +38,7 @@ def rlisten(keys: list[str], callback: Callable[[str, Optional[str]], None], *,
             client_id: Optional[int]) -> None:
     pubsub = redis.pubsub()
     for key in keys:
+        print(key)
         pubsub.subscribe(_get_redis_key(key, client_id=client_id))
     for item in pubsub.listen():
         print(item)
