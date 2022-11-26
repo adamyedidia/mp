@@ -14,12 +14,9 @@ def _handle_payload_from_server(payload: str) -> None:
     if payload.startswith('client_id|') and client.id is None:
         _, raw_client_id = payload.split('|')
         client.set_id(int(raw_client_id))
-    if payload.startswith('active_players|'):
+    else:
         key, data = payload.split('|')
-        rset(f'client_{key}', data, client_id=client.id)
-    if payload.startswith('player_state_'):
-        key, data = payload.split('|')
-        rset(f'client_{key}', data, client_id=client.id)
+        rset(key, data, client_id=client.id)
 
 
 def listen_for_server_updates(socket: Any) -> None:
