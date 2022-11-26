@@ -11,8 +11,9 @@ class Packet:
                  client_id: Optional[int] = None, 
                  is_ack: bool = False, 
                  payload: Optional[str] = None) -> None:
-        assert ';' not in payload
-        assert '||' not in payload
+        if payload is not None:
+            assert ';' not in payload
+            assert '||' not in payload
         self.id = id
         self.client_id = client_id
         self.is_ack = is_ack
