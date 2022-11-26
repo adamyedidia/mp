@@ -46,6 +46,8 @@ def listen_for_server_updates(socket: Any) -> None:
                             _handle_payload_from_server(payload)
                             send_ack(socket, packet_id)
                             rset(handled_redis_key, '1', client_id=client.id)
+                        else:
+                            print(f'Ignoring {packet} because this packet has already been handled')
 
 
 def client_main() -> None:

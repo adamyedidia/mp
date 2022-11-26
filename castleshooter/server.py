@@ -69,6 +69,8 @@ class GameState:
                             self.handle_payload_from_client(payload)
                             send_ack(conn, packet_id)
                             rset(handled_redis_key, '1', client_id=None)
+                        else:
+                            print(f'Ignoring {packet} because this packet has already been handled')
 
 
 def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> int:
