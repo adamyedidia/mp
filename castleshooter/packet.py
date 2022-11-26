@@ -77,7 +77,7 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
 
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
-def send_with_retry(conn: Any, message: str, *, client_id) -> bool:
+def send_with_retry(conn: Any, message: str, client_id: Optional[int]) -> bool:
     packet_id = _generate_next_packet_id(client_id=client_id)
     packet = Packet(id=packet_id, client_id=client_id, payload=message)
     wait_times = [0.05, 0.1, 0.2, 0.4, 0.8]
@@ -91,7 +91,7 @@ def send_with_retry(conn: Any, message: str, *, client_id) -> bool:
     return False
 
 
-def send_without_retry(conn: Any, message: str, *, client_id) -> None:
+def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> None:
     packet = Packet(client_id=client_id, payload=message)
     print(f'Sending {packet}')    
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
