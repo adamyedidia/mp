@@ -82,7 +82,7 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState) -
 
 def _handle_outgoing_active_players_connection(connection: Connection) -> None:
     def _handle_active_players_change(channel: str, value: Optional[str]) -> None:
-        send_with_retry(connection.conn, f'active_players|{value};')
+        send_with_retry(connection.conn, f'active_players|{value};', client_id=None)
 
     rlisten(['active_players'], _handle_active_players_change, client_id=None)
 
@@ -93,7 +93,7 @@ def _handle_outgoing_player_state_connection(connection: Connection, game_state:
         for p in active_players:
             player_state = game_state.get_player_state(p)
             if player_state is not None:
-                send_without_retry(connection.conn, f'player_state_{p}|{player_state};')
+                send_without_retry(connection.conn, f'player_state_{p}|{player_state};', client_id=None)
             sleep(.01)
         sleep(.01)
 
@@ -116,7 +116,7 @@ def main() -> None:
             game_state.set_active_players(active_connections_by_id)
             
             sleep(0.01)
-            send_with_retry(conn, f'client_id|{new_connection_id};')
+            send_with_retry(conn, f'client_id|{new_connection_id};', client_id=None)
             sleep(0.001)
 
             start_new_thread(_handle_incoming_connection, (connection, game_state))
