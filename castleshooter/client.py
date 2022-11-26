@@ -13,6 +13,7 @@ from packet import (
 def _handle_payload_from_server(payload: str) -> None:
     if payload.startswith('client_id|') and client.id is None:
         _, raw_client_id = payload.split('|')
+        print(f'setting client id to {raw_client_id}')
         client.set_id(int(raw_client_id))
     else:
         key, data = payload.split('|')
@@ -54,7 +55,9 @@ def client_main() -> None:
     print('connected to server!')
 
     g = game.Game(500,500, client, s)
+    print('initialized game!')
     start_new_thread(listen_for_server_updates, (s,))
+    print('Listening for server updates!')
     g.run()
 
 
