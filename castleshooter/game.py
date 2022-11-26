@@ -64,13 +64,13 @@ class Game:
         send_without_retry(self.s, data, client_id=client.id)
 
     def update_from_server(self) -> None:
-        active_players = rget('client_active_players', client_id=client.id)
+        active_players = rget('active_players', client_id=client.id)
         if not active_players:
             return
         player_numbers = [int(i) for i in active_players.split(',')]
         for p in player_numbers:
             if p not in self.players and p != self.player_number:
                 self.players[p] = Player(50, 50, Color(0, 255, 255))
-            player_state = rget(f'client_player_state_{p}', client_id=client.id)
+            player_state = rget(f'player_state_{p}', client_id=client.id)
             if player_state is not None:
                 self.players[p].from_json(player_state)
