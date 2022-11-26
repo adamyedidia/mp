@@ -47,13 +47,13 @@ def packet_ack_redis_key(packet_id: int) -> str:
     return f'packet_ack|{packet_id}'
 
 
-def packet_handled_redis_key(packet_id: int, for_client: Optional[int] = None) -> str:
+def packet_handled_redis_key(packet_id: int, *, for_client: Optional[int]) -> str:
     for_client_suffix = f'|{for_client}' if for_client is not None else ''
     return f'packet_handled|{packet_id}{for_client_suffix}'
 
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
-def _send_with_retry_inner(conn: Any, packet: Packet, client_id: Optional[int] = None) -> bool:
+def _send_with_retry_inner(conn: Any, packet: Packet, *, client_id: Optional[int]) -> bool:
     packet_id = packet.id
     assert packet_id is not None
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
@@ -67,7 +67,7 @@ def _send_with_retry_inner(conn: Any, packet: Packet, client_id: Optional[int] =
 
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
-def send_with_retry(conn: Any, message: str, client_id: Optional[int] = None) -> bool:
+def send_with_retry(conn: Any, message: str, *, client_id) -> bool:
     packet_id = _generate_next_packet_id(client_id=client_id)
     packet = Packet(id=packet_id, client_id=client_id, payload=message)
     wait_times = [Decimal('0.05'), Decimal('0.1'), Decimal('0.2'), Decimal('0.4'), Decimal('0.8')]
@@ -78,7 +78,7 @@ def send_with_retry(conn: Any, message: str, client_id: Optional[int] = None) ->
     return False
 
 
-def send_without_retry(conn: Any, message: str, client_id: Optional[int] = None) -> None:
+def send_without_retry(conn: Any, message: str, *, client_id) -> None:
     packet = Packet(client_id=client_id, payload=message)
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
 
