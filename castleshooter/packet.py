@@ -11,8 +11,9 @@ class Packet:
                  client_id: Optional[int] = None, 
                  is_ack: bool = False, 
                  payload: Optional[str] = None) -> None:
-        assert ';' not in payload
-        assert '||' not in payload
+        if payload is not None:
+            assert ';' not in payload
+            assert '||' not in payload
         self.id = id
         self.client_id = client_id
         self.is_ack = is_ack
@@ -28,7 +29,7 @@ class Packet:
                 return f'{self.id}||{self.client_id}||{self.payload};'
 
     @classmethod
-    def from_str(cls, packet_str: str):
+    def from_str(cls, packet_str: str) -> 'Packet':
         if packet_str.startswith('@'):
             return Packet(is_ack=True, id=int(packet_str[1:]))
         elif packet_str.startswith('~'):
