@@ -11,6 +11,8 @@ class Packet:
                  client_id: Optional[int] = None, 
                  is_ack: bool = False, 
                  payload: Optional[str] = None) -> None:
+        assert ';' not in payload
+        assert '||' not in payload
         self.id = id
         self.client_id = client_id
         self.is_ack = is_ack
@@ -57,6 +59,7 @@ def packet_handled_redis_key(packet_id: int, *, for_client: Optional[int]) -> st
 def _send_with_retry_inner(conn: Any, packet: Packet, *, client_id: Optional[int]) -> bool:
     packet_id = packet.id
     assert packet_id is not None
+    print(f'Sending {packet.to_str()}')
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
 
     # We're relying on a different process to listen for acks and write to redis when one is seen
