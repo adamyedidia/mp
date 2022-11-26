@@ -6,16 +6,16 @@ import redis_lock as rl
 
 redis = r.Redis(connection_pool=r.ConnectionPool(host='localhost', port=6379, db=0))
 
-def _get_redis_key_prefix(client_id: Optional[int] = None) -> str:
+def _get_redis_key_prefix(*, client_id: Optional[int]) -> str:
     return f'client:{client_id}' if client_id is not None else 'server'
 
 
-def _get_redis_key(key: str, client_id: Optional[int] = None) -> str:
+def _get_redis_key(key: str, *, client_id: Optional[int]) -> str:
     prefix = _get_redis_key_prefix(client_id=client_id)
     return f'{prefix}:{key}'
 
 
-def _get_redis_key_inverse(redis_key: str, client_id: Optional[int] = None) -> str:
+def _get_redis_key_inverse(redis_key: str, *, client_id: Optional[int]) -> str:
     prefix = _get_redis_key_prefix(client_id=client_id)
     assert redis_key.startswith(prefix)
     return redis_key[len(prefix) + 1:]
@@ -30,20 +30,20 @@ def _to_optional_str(val: Any) -> Optional[str]:
         return str(val)
 
 
-def rset(key: str, value: Any, client_id: Optional[int] = None) -> Optional[bool]:
+def rset(key: str, value: Any, *, client_id: Optional[int]) -> Optional[bool]:
     redis_key = _get_redis_key(key, client_id=client_id)
     redis.publish(redis_key, str(value))
     return redis.set(_get_redis_key(key, client_id=client_id), str(value))
 
 
-def rget(key: str, client_id: Optional[int] = None) -> Optional[str]:
+def rget(key: str, *, client_id: Optional[int]) -> Optional[str]:
     return (val.decode() 
             if (val := redis.get(_get_redis_key(key, client_id=client_id))) is not None 
             else None)
 
 
-def rlisten(keys: list[str], callback: Callable[[str, Optional[str]], None], 
-            client_id: Optional[int] = None) -> None:
+def rlisten(keys: list[str], callback: Callable[[str, Optional[str]], None], *,
+            client_id: Optional[int]) -> None:
     pubsub = redis.pubsub()
     for key in keys:
         pubsub.subscribe(_get_redis_key(key, client_id=client_id))
@@ -62,7 +62,7 @@ def flushall() -> None:
 
 
 @contextmanager
-def redis_lock(key: str, client_id: Optional[int] = None) -> Any:
+def redis_lock(key: str, *, client_id: Optional[int]) -> Any:
     lock = rl.Lock(redis, _get_redis_key(key, client_id=client_id))
     lock.acquire()
     try:

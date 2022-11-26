@@ -39,7 +39,7 @@ def listen_for_server_updates(socket: Any) -> None:
                 _handle_payload_from_server(payload)
             else:
                 assert payload is not None
-                with redis_lock(f'handle_payload_from_server|{packet.id}'):
+                with redis_lock(f'handle_payload_from_server|{packet.id}', client_id=client.id):
                     handled_redis_key = packet_handled_redis_key(packet_id)
                     # Want to make sure not to handle the same packet twice due to a re-send, 
                     # if our ack didn't get through

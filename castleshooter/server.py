@@ -25,19 +25,19 @@ class GameState:
     def set_active_players(self, active_connections_by_id: dict):
         client_ids = active_connections_by_id.keys()
         print(f'client_ids: {client_ids}')
-        rset('active_players', ','.join(str(i) for i in client_ids))
+        rset('active_players', ','.join(str(i) for i in client_ids), client_id=None)
 
     def get_active_players(self) -> list[int]:
-        active_players = rget('active_players') or ''
+        active_players = rget('active_players', client_id=None) or ''
         return [int(i) for i in active_players.split(',')]
 
     def get_player_state(self, player_number: int) -> Optional[str]:
-        return rget(f'player_state_{player_number}')
+        return rget(f'player_state_{player_number}', client_id=None)
 
     def handle_payload_from_client(self, payload: str):
         if payload.startswith('player_state'):
             key, data = payload.split('|')
-            rset(key, data)
+            rset(key, data, client_id=None)
 
     def handle_data_from_client(self, raw_data: str, conn: Any):
         for datum in raw_data.split(';'):
@@ -48,21 +48,22 @@ class GameState:
             if packet.is_ack:
                 assert packet_id is not None
                 # Record in redis that the message has been acked
-                rset(packet_ack_redis_key(packet_id), '1')
+                rset(packet_ack_redis_key(packet_id), '1', client_id=None)
             elif packet_id is None:
                 assert payload is not None
                 self.handle_payload_from_client(payload)
             else:
                 assert payload is not None
-                with redis_lock(f'handle_payload_from_client|{packet.client_id}|{packet.id}'):
+                with redis_lock(f'handle_payload_from_client|{packet.client_id}|{packet.id}', 
+                                client_id=None):
                     handled_redis_key = packet_handled_redis_key(packet_id, 
                                                                  for_client=packet.client_id)
                     # Want to make sure not to handle the same packet twice due to a re-send, 
                     # if our ack didn't get through
-                    if not rget(handled_redis_key):
+                    if not rget(handled_redis_key, client_id=None):
                         self.handle_payload_from_client(payload)
                         send_ack(conn, packet_id)
-                        rset(handled_redis_key, '1')
+                        rset(handled_redis_key, '1', client_id=None)
 
 
 def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> int:
@@ -83,7 +84,7 @@ def _handle_outgoing_active_players_connection(connection: Connection) -> None:
     def _handle_active_players_change(channel: str, value: Optional[str]) -> None:
         send_with_retry(connection.conn, f'active_players|{value};')
 
-    rlisten(['active_players'], _handle_active_players_change)
+    rlisten(['active_players'], _handle_active_players_change, client_id=None)
 
 
 def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
