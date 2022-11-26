@@ -59,7 +59,7 @@ class Game:
         pygame.quit()
 
     def send_data(self) -> None:
-        data = f'player_state_{self.player_number}|{self.player.to_json()};'
+        data = f'player_state_{self.player_number}|{self.player.to_json()}'
         print(data)
         send_without_retry(self.s, data, client_id=client.id)
 

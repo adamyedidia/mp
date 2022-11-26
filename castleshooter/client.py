@@ -50,6 +50,7 @@ def client_main() -> None:
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((SERVER, PORT))
+    print('connected to server!')
 
     g = game.Game(500,500, client, s)
     start_new_thread(listen_for_server_updates, (s,))
