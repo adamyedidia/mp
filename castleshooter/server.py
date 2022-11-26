@@ -85,10 +85,10 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState) -
 
 
 def _handle_outgoing_active_players_connection(connection: Connection) -> None:
-    def _handle_active_players_change(channel: str, value: Optional[str]) -> None:
-        send_with_retry(connection.conn, f'active_players|{value}', client_id=None)
+    def _handle_change(channel: str, value: Optional[str]) -> None:
+        send_with_retry(connection.conn, f'{channel}|{value}', client_id=None)
 
-    rlisten(_SUBSCRIPTION_KEYS, _handle_active_players_change, client_id=None)
+    rlisten(_SUBSCRIPTION_KEYS, _handle_change, client_id=None)
 
 
 def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
