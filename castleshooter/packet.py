@@ -39,6 +39,9 @@ class Packet:
             packet_id, client_id, payload = packet_str.split('||')
             return Packet(id=int(packet_id), client_id=to_optional_int(client_id), payload=payload)
 
+    def __repr__(self) -> str:
+        return f'<Packet {self.id}: {self.to_str()}>'
+
 
 def _generate_next_packet_id(client_id: Optional[int]) -> int:
     with redis_lock('generate_next_packet_id_redis_lock', client_id=client_id):
@@ -60,7 +63,7 @@ def packet_handled_redis_key(packet_id: int, *, for_client: Optional[int]) -> st
 def _send_with_retry_inner(conn: Any, packet: Packet, *, client_id: Optional[int]) -> bool:
     packet_id = packet.id
     assert packet_id is not None
-    print(f'Sending {packet.to_str()}')
+    print(f'Sending {packet}')
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
 
     # We're relying on a different process to listen for acks and write to redis when one is seen
@@ -76,18 +79,24 @@ def send_with_retry(conn: Any, message: str, *, client_id) -> bool:
     packet_id = _generate_next_packet_id(client_id=client_id)
     packet = Packet(id=packet_id, client_id=client_id, payload=message)
     wait_times = [Decimal('0.05'), Decimal('0.1'), Decimal('0.2'), Decimal('0.4'), Decimal('0.8')]
-    for wait_time in wait_times:
+    for i, wait_time in enumerate(wait_times):
         if gevent.with_timeout(wait_time, lambda: _send_with_retry_inner(conn, packet, client_id=client_id), 
                                timeout_value=False):
             return True
+        debug_msg = f'Did not get a response in {wait_time} for {packet}'
+        if i < len(wait_times) - 1:
+            debug_msg = f'{debug_msg}, retrying...'
+        print(debug_msg)
     return False
 
 
 def send_without_retry(conn: Any, message: str, *, client_id) -> None:
     packet = Packet(client_id=client_id, payload=message)
+    print(f'Sending {packet}')    
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
 
 
 def send_ack(conn: Any, packet_id: int) -> None:
-    packet = Packet(id=packet_id, is_ack=True)    
+    packet = Packet(id=packet_id, is_ack=True)
+    print(f'Acking {packet}')        
     conn.sendall(bytes(packet.to_str(), 'utf-8'))    
