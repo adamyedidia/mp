@@ -24,6 +24,8 @@ class Game:
     def run(self):
         clock = pygame.time.Clock()
         run = True
+        if self.player_number < 0:
+            print(f'Uh oh, my player number is {self.player_number}, which is messed up')
         while run:
             clock.tick(60)
 

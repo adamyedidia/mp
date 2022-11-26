@@ -3,6 +3,7 @@ from typing import Any, Optional
 import gevent
 from redis_utils import redis_lock, rget, rset, rlisten
 from utils import to_optional_int
+from time import sleep
 
 
 class Packet:
@@ -60,28 +61,28 @@ def packet_handled_redis_key(packet_id: int, *, for_client: Optional[int]) -> st
 
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
-def _send_with_retry_inner(conn: Any, packet: Packet, *, client_id: Optional[int]) -> bool:
+def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *, 
+                           client_id: Optional[int]) -> bool:
     packet_id = packet.id
     assert packet_id is not None
     print(f'Sending {packet}')
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
+    sleep(wait_time)
 
     # We're relying on a different process to listen for acks and write to redis when one is seen
     ack_redis_key = packet_ack_redis_key(packet_id)
     if rget(ack_redis_key, client_id=client_id):
         return True
-    rlisten([ack_redis_key], lambda channel, data: None, client_id=client_id)
-    return True
+    return False
 
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
 def send_with_retry(conn: Any, message: str, *, client_id) -> bool:
     packet_id = _generate_next_packet_id(client_id=client_id)
     packet = Packet(id=packet_id, client_id=client_id, payload=message)
-    wait_times = [Decimal('0.05'), Decimal('0.1'), Decimal('0.2'), Decimal('0.4'), Decimal('0.8')]
+    wait_times = [0.05, 0.1, 0.2, 0.4, 0.8]
     for i, wait_time in enumerate(wait_times):
-        if gevent.with_timeout(wait_time, lambda: _send_with_retry_inner(conn, packet, client_id=client_id), 
-                               timeout_value=False):
+        if _send_with_retry_inner(conn, packet, wait_time, client_id=client_id):
             return True
         debug_msg = f'Did not get a response in {wait_time} for {packet}'
         if i < len(wait_times) - 1:

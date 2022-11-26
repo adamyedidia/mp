@@ -113,7 +113,9 @@ def main() -> None:
         s.listen()
         print('Starting the server!')
         while True:
+            print('Waiting on a new connection...')
             conn, addr = s.accept()
+            print('New connection!')
             new_connection_id = _get_new_connection_id(active_connections_by_id)
             connection = Connection(new_connection_id, conn, addr)
             active_connections_by_id[new_connection_id] = connection
@@ -122,6 +124,7 @@ def main() -> None:
             sleep(0.01)
             print(f'A new client has connected! ID: {new_connection_id}')
             send_with_retry(conn, f'client_id|{new_connection_id}', client_id=None)
+            print(f'Done sending client id of {new_connection_id}!')
             sleep(0.001)
 
             start_new_thread(_handle_incoming_connection, (connection, game_state))
