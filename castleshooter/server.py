@@ -97,6 +97,8 @@ def _handle_outgoing_active_players_connection(connection: Connection) -> None:
 def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
     while True:
         active_players = game_state.get_active_players()
+        players_list = rget('active_players', client_id=None)
+        send_without_retry(connection.conn, f'active_players|{players_list}', client_id=None)
         for p in active_players:
             player_state = game_state.get_player_state(p)
             if player_state is not None:
