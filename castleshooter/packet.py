@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Any, Optional
 import gevent
 from redis_utils import redis_lock, rget, rset, rlisten
+from utils import to_optional_int
 
 
 class Packet:
@@ -20,20 +21,20 @@ class Packet:
             return f'@{self.id};'
         else:
             if self.id is None:
-                return f'~|{self.client_id}|{self.payload};'
+                return f'~||{self.client_id}||{self.payload};'
             else:
-                return f'{self.id}|{self.client_id}|{self.payload};'
+                return f'{self.id}||{self.client_id}||{self.payload};'
 
     @classmethod
     def from_str(cls, packet_str: str):
         if packet_str.startswith('@'):
             return Packet(is_ack=True, id=int(packet_str[1:]))
         elif packet_str.startswith('~'):
-            _, client_id, payload = packet_str.split('|')
-            return Packet(client_id=int(client_id), payload=payload)
+            _, client_id, payload = packet_str.split('||')
+            return Packet(client_id=to_optional_int(client_id), payload=payload)
         else:
-            packet_id, client_id, payload = packet_str.split('|')
-            return Packet(id=int(packet_id), client_id=int(client_id), payload=payload)
+            packet_id, client_id, payload = packet_str.split('||')
+            return Packet(id=int(packet_id), client_id=to_optional_int(client_id), payload=payload)
 
 
 def _generate_next_packet_id(client_id: Optional[int]) -> int:

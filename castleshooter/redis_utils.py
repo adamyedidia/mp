@@ -3,6 +3,7 @@ from typing import Any, Callable, Optional
 
 from contextlib import contextmanager
 import redis_lock as rl
+from utils import to_optional_str
 
 redis = r.Redis(connection_pool=r.ConnectionPool(host='localhost', port=6379, db=0))
 
@@ -19,15 +20,6 @@ def _get_redis_key_inverse(redis_key: str, *, client_id: Optional[int]) -> str:
     prefix = _get_redis_key_prefix(client_id=client_id)
     assert redis_key.startswith(prefix)
     return redis_key[len(prefix) + 1:]
-
-
-def _to_optional_str(val: Any) -> Optional[str]:
-    if isinstance(val, bytes):
-        return val.decode()
-    elif val is None:
-        return None
-    else:
-        return str(val)
 
 
 def rset(key: str, value: Any, *, client_id: Optional[int]) -> Optional[bool]:
@@ -50,10 +42,10 @@ def rlisten(keys: list[str], callback: Callable[[str, Optional[str]], None], *,
     for item in pubsub.listen():
         print(item)
         if item['type'] == 'message':
-            raw_channel = _to_optional_str(item['channel'])
+            raw_channel = to_optional_str(item['channel'])
             assert raw_channel is not None
             channel = _get_redis_key_inverse(raw_channel, client_id=client_id)
-            data = _to_optional_str(item['data'])
+            data = to_optional_str(item['data'])
             callback(channel, data)
 
 
