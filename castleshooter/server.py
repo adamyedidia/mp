@@ -52,6 +52,7 @@ class GameState:
                 if packet.is_ack:
                     assert packet_id is not None
                     # Record in redis that the message has been acked
+                    print(f'Received ack for {packet}')
                     rset(packet_ack_redis_key(packet_id), '1', client_id=None)
                 elif packet_id is None:
                     assert payload is not None
@@ -123,7 +124,7 @@ def main() -> None:
             
             sleep(0.01)
             print(f'A new client has connected! ID: {new_connection_id}')
-            send_with_retry(conn, f'client_id|{new_connection_id}', client_id=None)
+            start_new_thread(send_with_retry, (conn, f'client_id|{new_connection_id}', None))
             print(f'Done sending client id of {new_connection_id}!')
             sleep(0.001)
 
