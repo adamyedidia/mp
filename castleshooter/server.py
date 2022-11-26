@@ -11,6 +11,9 @@ from packet import (
 )
 
 
+_SUBSCRIPTION_KEYS = ['active_players'] + [f'player_state_{n}' for n in range(100)]
+
+
 class Connection:
     def __init__(self, id: int, conn: Any, addr: tuple[str, int]) -> None:
         self.id = id
@@ -84,7 +87,7 @@ def _handle_outgoing_active_players_connection(connection: Connection) -> None:
     def _handle_active_players_change(channel: str, value: Optional[str]) -> None:
         send_with_retry(connection.conn, f'active_players|{value}', client_id=None)
 
-    rlisten(['active_players'], _handle_active_players_change, client_id=None)
+    rlisten(_SUBSCRIPTION_KEYS, _handle_active_players_change, client_id=None)
 
 
 def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
@@ -94,8 +97,8 @@ def _handle_outgoing_player_state_connection(connection: Connection, game_state:
             player_state = game_state.get_player_state(p)
             if player_state is not None:
                 send_without_retry(connection.conn, f'player_state_{p}|{player_state}', client_id=None)
-            sleep(.01)
-        sleep(.01)
+            sleep(1)
+        sleep(1)
 
 
 def main() -> None:
