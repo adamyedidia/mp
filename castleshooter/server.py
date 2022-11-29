@@ -91,7 +91,7 @@ def _handle_outgoing_active_players_connection(connection: Connection) -> None:
     def _handle_change(channel: str, value: Optional[str]) -> None:
         send_without_retry(connection.conn, f'{channel}|{value}', client_id=None)
 
-    rlisten(_SUBSCRIPTION_KEYS, _handle_change, client_id=None)
+    rlisten(_SUBSCRIPTION_KEYS, _handle_change)
 
 
 def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
