@@ -8,6 +8,8 @@ from client_utils import client
 from packet import (
     Packet, send_ack, send_without_retry, packet_ack_redis_key, packet_handled_redis_key
 )
+import json
+from json.decoder import JSONDecodeError
 
 
 def _handle_payload_from_server(payload: str) -> None:
@@ -17,6 +19,15 @@ def _handle_payload_from_server(payload: str) -> None:
         client.set_id(int(raw_client_id))
     else:
         key, data = payload.split('|')
+
+        # Some validation
+        if 'player_state' in key:
+            try:
+                json.loads(data)
+            except JSONDecodeError:
+                print(f'Discarding packet because could not load json: {data}')
+                return
+
         rset(key, data, client_id=client.id)
 
 

@@ -2,6 +2,7 @@ import pygame
 from pygame import Color
 import json
 from item import Item, Sword
+from json.decoder import JSONDecodeError
 
 class Player():
     def __init__(self, startx: int, starty: int, color: Color=Color(255, 0, 0)):
@@ -45,7 +46,7 @@ class Player():
             # 'item': self.item.to_json(),
         })
 
-    def from_json(self, j: str):
+    def update_from_json(self, j: str):
         d: dict = json.loads(j)
         self.x = d['x']
         self.y = d['y']

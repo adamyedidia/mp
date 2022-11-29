@@ -9,6 +9,7 @@ from canvas import Canvas
 from client_utils import Client, client
 
 from packet import send_without_retry
+from json.decoder import JSONDecodeError
 
 class Game:
     def __init__(self, w: int, h: int, client: Client, socket: socket):
@@ -75,4 +76,7 @@ class Game:
                 self.players[p] = Player(50, 50, Color(0, 255, 255))
             player_state = rget(f'player_state_{p}', client_id=client.id)
             if player_state is not None:
-                self.players[p].from_json(player_state)
+                try:
+                    self.players[p].update_from_json(player_state)
+                except JSONDecodeError:
+                    print(f'Invalid json: {player_state}')
