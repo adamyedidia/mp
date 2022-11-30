@@ -18,28 +18,24 @@ from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY
 
 
 def start_up_game(socket: Any) -> None:
-    assert client.id
+    assert client.id is not None
     send_spawn_command(socket, 50, 50, client_id=client.id)    
     g = game.Game(500,500, client, socket)
     g.run()    
 
 
 def _handle_client_id_packet(payload: str) -> bool:
-    if payload.startswith('client_id|') and client.id is None:
+    if payload.startswith('client_id|') and client.id in [None, -1]:
         _, raw_client_id = payload.split('|')
         print(f'setting client id to {raw_client_id}')
         client.set_id(int(raw_client_id))
-        start_new_thread(start_up_game, (socket,))
         return True
     return False    
 
 
 def _handle_payload_from_server(payload: str) -> None:
     if payload.startswith('client_id|') and client.id is None:
-        _, raw_client_id = payload.split('|')
-        print(f'setting client id to {raw_client_id}')
-        client.set_id(int(raw_client_id))
-        start_new_thread(start_up_game, (socket,))
+        pass
     else:
         key, data = payload.split('|')
 
@@ -72,17 +68,17 @@ def _handle_payload_from_server(payload: str) -> None:
                                                   if (c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)
                                                       and c.id not in [ci.id for ci in commands_for_player])]
                 commands_for_player.extend(commands_for_player_from_server)
-                commands_by_player[player_id] = [json.dumps(c) for c in commands_for_player]
+                commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]
 
             for player_id, raw_commands_from_server in raw_commands_by_player_from_server.items():
                 if player_id in player_ids_handled:
                     continue
                 player_ids_handled.add(player_id)
-                commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands], 
+                commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], 
                                              key=lambda c: c.time)                
                 commands_for_player = [c for c in commands_for_player 
                                        if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
-                commands_by_player[player_id] = [json.dumps(c) for c in commands_for_player]                                             
+                commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]                                             
 
 
 def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
@@ -109,7 +105,7 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
                     if not rget(handled_redis_key, client_id=client.id or -1):
                         if client_id_only:
                             if _handle_client_id_packet(payload):
-                                break
+                                return
                         else:
                             _handle_payload_from_server(payload)
                         send_ack(socket, packet_id)

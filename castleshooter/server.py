@@ -50,7 +50,7 @@ class GameState:
             # rset(key, data, client_id=None)
         elif payload.startswith('command'):
             _, data = payload.split('|')
-            assert packet.client_id
+            assert packet.client_id is not None
             store_command(Command.from_json(json.loads(data)), client_id=None, for_client=packet.client_id)
             
     def handle_data_from_client(self, raw_data: str, conn: Any):
@@ -108,7 +108,7 @@ def _handle_outgoing_active_players_connection(connection: Connection) -> None:
 def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
     while True:
         game.infer_and_store_game_state_snap()
-        
+
         sleep(1)
 
 

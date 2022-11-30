@@ -23,7 +23,7 @@ class Player():
         self.healthbar: HealthBar = healthbar if healthbar is not None else HealthBar()
         self.item: Item = Sword()
 
-        self.speed: int = 2
+        self.speed: int = 100
         self.color = color
 
     def draw(self, g: pygame.surface.Surface):
@@ -60,6 +60,8 @@ class Player():
 
     @classmethod
     def from_json(cls, d: dict) -> 'Player':
+        if isinstance(d, str):
+            d = json.loads(d)
         return Player(client_id=d['client_id'], startx=d['x'], starty=d['y'], 
                       dest_x=to_optional_int(d['dest_x']), dest_y=to_optional_int(d['dest_y']),
                       healthbar=HealthBar.from_json(d['healthbar']))
@@ -107,6 +109,8 @@ class HealthBar():
     
     @classmethod
     def from_json(cls, d: dict) -> 'HealthBar':
+        if isinstance(d, str):
+            d = json.loads(d)
         return HealthBar(hp=d['hp'])
 
     def update_from_json(self, j: str):
