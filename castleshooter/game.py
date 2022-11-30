@@ -128,6 +128,7 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
     for command in commands_for_player:
         if player is None and command.type != CommandType.SPAWN:
             continue
+        _move_player(player, prev_time=current_time, next_time=command.time)
         if command.type == CommandType.MOVE:
             assert player is not None
             assert command.data is not None
@@ -135,9 +136,7 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             player.dest_y = command.data['y']
         elif command.type == CommandType.SPAWN:
             assert command.data is not None
-            player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'])
-        
-        _move_player(player, prev_time=current_time, next_time=command.time)
+            player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'])        
         current_time = command.time
     _move_player(player, prev_time=current_time, next_time=datetime.now())
 
@@ -162,20 +161,7 @@ def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
         raw_commands_for_player = raw_commands_by_player.get(player_client_id) or []
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)
-        current_time = snap_to_run_forward_from.time
-        commands_for_player = [c for c in commands_for_player if c.time > current_time]        
-        for command in commands_for_player:
-            if command.type == CommandType.MOVE:
-                assert command.data
-                player.dest_x = command.data['x']
-                player.dest_y = command.data['y']
-            elif command.type == CommandType.SPAWN:
-                assert command.data
-                player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'])
-            
-            _move_player(player, prev_time=current_time, next_time=command.time)
-            current_time = command.time
-        _move_player(player, prev_time=current_time, next_time=datetime.now())
+        player = _run_commands_for_player(snap_to_run_forward_from.time, player, commands_for_player, player_client_id)
         final_players.append(player)
 
     for player_client_id, raw_commands_for_player in raw_commands_by_player.items():
