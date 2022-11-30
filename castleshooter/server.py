@@ -1,3 +1,5 @@
+import json
+from command import Command, store_command
 from settings import PORT, SERVER
 import socket
 from typing import Any, Optional
@@ -9,9 +11,13 @@ from packet import (
     Packet, send_with_retry, send_without_retry, send_ack, packet_ack_redis_key, 
     packet_handled_redis_key
 )
+import game
 
 
-_SUBSCRIPTION_KEYS = ['active_players'] + [f'player_state_{n}' for n in range(100)]
+_SUBSCRIPTION_KEYS = ['active_players', 
+                      *[f'player_state_{n}' for n in range(100)],
+                      'most_recent_game_state_snapshot',
+                      'commands_by_player']
 
 
 class Connection:
@@ -34,14 +40,19 @@ class GameState:
         active_players = rget('active_players', client_id=None) or ''
         return [int(i) for i in active_players.split(',')]
 
-    def get_player_state(self, player_number: int) -> Optional[str]:
+    def get_player_state(self, player_number: int, packet: Packet) -> Optional[str]:
         return rget(f'player_state_{player_number}', client_id=None)
 
-    def handle_payload_from_client(self, payload: str):
+    def handle_payload_from_client(self, payload: str, packet: Packet):
         if payload.startswith('player_state'):
-            key, data = payload.split('|')
-            rset(key, data, client_id=None)
-
+            pass
+            # key, data = payload.split('|')
+            # rset(key, data, client_id=None)
+        elif payload.startswith('command'):
+            _, data = payload.split('|')
+            assert packet.client_id
+            store_command(Command.from_json(json.loads(data)), client_id=None, for_client=packet.client_id)
+            
     def handle_data_from_client(self, raw_data: str, conn: Any):
         for datum in raw_data.split(';'):
             if datum:
@@ -56,7 +67,7 @@ class GameState:
                     rset(packet_ack_redis_key(packet_id), '1', client_id=None)
                 elif packet_id is None:
                     assert payload is not None
-                    self.handle_payload_from_client(payload)
+                    self.handle_payload_from_client(payload, packet)
                 else:
                     assert payload is not None
                     with redis_lock(f'handle_payload_from_client|{packet.client_id}|{packet.id}', 
@@ -66,7 +77,7 @@ class GameState:
                         # Want to make sure not to handle the same packet twice due to a re-send, 
                         # if our ack didn't get through
                         if not rget(handled_redis_key, client_id=None):
-                            self.handle_payload_from_client(payload)
+                            self.handle_payload_from_client(payload, packet)
                             send_ack(conn, packet_id)
                             rset(handled_redis_key, '1', client_id=None)
                         else:
@@ -96,15 +107,21 @@ def _handle_outgoing_active_players_connection(connection: Connection) -> None:
 
 def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
     while True:
-        active_players = game_state.get_active_players()
-        players_list = rget('active_players', client_id=None)
-        send_without_retry(connection.conn, f'active_players|{players_list}', client_id=None)
-        for p in active_players:
-            player_state = game_state.get_player_state(p)
-            if player_state is not None:
-                send_without_retry(connection.conn, f'player_state_{p}|{player_state}', client_id=None)
-            sleep(1)
+        game.infer_and_store_game_state_snap()
+        
         sleep(1)
+
+
+    # while True:
+    #     active_players = game_state.get_active_players()
+    #     players_list = rget('active_players', client_id=None)
+    #     send_without_retry(connection.conn, f'active_players|{json.dumps(players_list)}', client_id=None)
+    #     for p in active_players:
+    #         player_state = game_state.get_player_state(p)
+    #         if player_state is not None:
+    #             send_without_retry(connection.conn, f'player_state_{p}|{player_state}', client_id=None)
+    #         sleep(1)
+    #     sleep(1)
 
 
 def main() -> None:

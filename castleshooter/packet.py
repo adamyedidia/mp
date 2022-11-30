@@ -1,9 +1,12 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 import gevent
+from command import Command, CommandType
 from redis_utils import redis_lock, rget, rset, rlisten
 from utils import to_optional_int
 from time import sleep
+import json
 
 
 class Packet:
@@ -101,3 +104,24 @@ def send_ack(conn: Any, packet_id: int) -> None:
     packet = Packet(id=packet_id, is_ack=True)
     print(f'Acking {packet}')        
     conn.sendall(bytes(packet.to_str(), 'utf-8'))    
+
+
+def send_command(conn: Any, command: Command, *, client_id: Optional[int]) -> None:
+    send_without_retry(conn, f'command|{json.dumps(command.to_json())}', client_id=client_id)
+
+
+def _generate_next_command_id(client_id: Optional[int]) -> int:
+    next_command_id = int(rget('next_command_id', client_id=client_id) or '0') + 1
+    rset('next_command_id', next_command_id, client_id=client_id)
+    return next_command_id
+
+def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: Optional[int]) -> None:
+    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
+                        type=CommandType.MOVE, time=datetime.now(), client_id=client_id, 
+                        data={'x': x_pos, 'y': y_pos}), client_id=client_id)
+
+
+def send_spawn_command(conn: Any, x_pos: int, y_pos: int, *, client_id: Optional[int]) -> None:
+    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
+                        type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
+                        data={'x': x_pos, 'y': y_pos}), client_id=client_id)
