@@ -73,7 +73,7 @@ class Game:
 
     def send_data(self) -> None:
         data = f'player_state_{self.player_number}|{self.player.to_json()}'
-        print(data)
+        print(f'Sending: {data}')
         send_without_retry(self.s, data, client_id=client.id)
 
 
@@ -159,23 +159,11 @@ def lists_are_equal(l1: list[str], l2: list[str]) -> bool:
     return True
 
 
-last_raw_commands = []
-last_raw_snaps = []
-last_game_state_inferred = None
-last_time = None
-
-
 def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
     raw_snaps = get_game_state_snapshots(client_id=client_id)
     assert len(raw_snaps) > 0
     raw_snap_to_run_forward_from = raw_snaps[0] if len(raw_snaps) == 1 else raw_snaps[-1]
-    # raw_snap_to_run_forward_from = raw_snaps[0]
     snap_to_run_forward_from = GameState.from_json(json.loads(raw_snap_to_run_forward_from))
-    if client_id is None:
-        if len(snap_to_run_forward_from.players) > 0:
-            # import IPython
-            # IPython.embed()
-            print(snap_to_run_forward_from.players[0].x,snap_to_run_forward_from.players[0].y)
     raw_commands_by_player = get_commands_by_player(client_id=client_id)
     player_ids_commands_have_been_run_for: set[int] = set()
     final_players: list[Player] = []
@@ -199,31 +187,6 @@ def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
         player = _run_commands_for_player(snap_to_run_forward_from.time, None, commands_for_player, player_client_id)
         if player:
             final_players.append(player)
-
-    game_state = GameState(players=final_players, time=datetime.now())
-    game_state_inferred = json.dumps(game_state.to_json())
-    global last_game_state_inferred
-    global last_raw_commands
-    global last_raw_snaps
-    global last_time
-
-    # if (player_client_id is not None and (not lists_are_equal(raw_commands_by_player[player_client_id], last_raw_commands)
-    #         or not lists_are_equal(raw_snaps, last_raw_snaps))):
-    if (player_client_id is not None and (not lists_are_equal(raw_snaps, last_raw_snaps))):            
-        if player_client_id is not None:
-            print(f'last_raw_commands: {last_raw_commands}\n')
-            print(f'last_raw_snaps: {last_raw_snaps}\n')
-            print(f'last_game_state_inferred: {last_game_state_inferred}\n')          
-            print(f'last_time: {last_time}\n')      
-            print(f'raw_commands: {raw_commands_by_player[player_client_id]}\n')  
-            print(f'raw_snaps: {raw_snaps}\n')
-            print(f'game_state_inferred: {game_state_inferred}\n')
-            print(f'current time: {datetime.now()}\n')
-
-    last_raw_commands = raw_commands_by_player.get(player_client_id) or []
-    last_raw_snaps = raw_snaps
-    last_game_state_inferred = game_state_inferred
-    last_time = datetime.now()
 
     return GameState(players=final_players, time=datetime.now())
 
