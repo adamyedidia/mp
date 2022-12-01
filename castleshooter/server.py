@@ -95,7 +95,6 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState) -
     print('handling incoming connection!')
     while True:
         data = connection.conn.recv(4096).decode()
-        print(f'Received: {data}')
         game_state.handle_data_from_client(data, connection.conn)
 
 

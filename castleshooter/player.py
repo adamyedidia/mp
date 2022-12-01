@@ -2,13 +2,14 @@ from typing import Optional
 import pygame
 from pygame import Color
 import json
+from direction import Direction, to_optional_direction
 from item import Item, Sword
 from json.decoder import JSONDecodeError
 
 from utils import to_optional_int
 
 class Player():
-    def __init__(self, client_id: int, startx: int, starty: int, 
+    def __init__(self, client_id: int, startx: int, starty: int, direction: Optional[Direction] = None,
                  dest_x: Optional[int] = None, dest_y: Optional[int] = None,
                  color: Color=Color(255, 0, 0), 
                  healthbar: Optional['HealthBar'] = None):
@@ -17,6 +18,7 @@ class Player():
         self.y = starty
         self.dest_x = dest_x
         self.dest_y = dest_y
+        self.direction = direction
         self.width = 50
         self.height = 50
 
@@ -55,6 +57,7 @@ class Player():
             'dest_x': self.dest_x,
             'dest_y': self.dest_y,
             'healthbar': self.healthbar.to_json(),
+            'direction': self.direction.value if self.direction is not None else None,
             # 'item': self.item.to_json(),
         })
 
@@ -64,7 +67,8 @@ class Player():
             d = json.loads(d)
         return Player(client_id=d['client_id'], startx=d['x'], starty=d['y'], 
                       dest_x=to_optional_int(d['dest_x']), dest_y=to_optional_int(d['dest_y']),
-                      healthbar=HealthBar.from_json(d['healthbar']))
+                      healthbar=HealthBar.from_json(d['healthbar']), 
+                      direction=to_optional_direction(d['direction']))
 
     def copy(self) -> 'Player':
         return Player.from_json(self.to_json())
@@ -75,6 +79,7 @@ class Player():
         self.y = d['y']
         self.dest_x = d['dest_x']
         self.dest_y = d['dest_y']
+        self.direction = to_optional_direction(d['direction'])
         self.healthbar.update_from_json(d['healthbar'])
         # self.item.from_json(d['item'])  # TODO: fix this
 
