@@ -47,12 +47,13 @@ def get_commands_by_player(*, client_id: Optional[int] = None) -> dict[int, list
     if client_id is not None:
         return commands_by_player
     else:
-        return json.loads(rget('commands_by_player', client_id=None) or '{}')
+        return {int(key): val for key, val in json.loads(rget('commands_by_player', client_id=None) or '{}').items()}
 
 
 def store_command(command: Command, *, for_client: int, 
                   client_id: Optional[int] = None) -> None:
     command_str = json.dumps(command.to_json())
+    global commands_by_player
     if client_id is not None:
         commands_by_player[for_client].append(command_str)
     else:

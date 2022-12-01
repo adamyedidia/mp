@@ -66,6 +66,8 @@ class Player():
                       dest_x=to_optional_int(d['dest_x']), dest_y=to_optional_int(d['dest_y']),
                       healthbar=HealthBar.from_json(d['healthbar']))
 
+    def copy(self) -> 'Player':
+        return Player.from_json(self.to_json())
 
     def update_from_json(self, j: str):
         d: dict = json.loads(j)
