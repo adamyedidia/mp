@@ -9,7 +9,7 @@ from redis_utils import redis_lock, rget, rset
 from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, to_optional_int, remove_nones
 
 
-commands_by_player: defaultdict[int, list[str]] = defaultdict(list)
+commands_by_player: dict[int, list[str]] = defaultdict(list)
 
 
 class CommandType(Enum):
@@ -59,6 +59,7 @@ def store_command(command: Command, *, for_client: int,
     else:
         commands_by_player = get_commands_by_player(client_id=None)
         with redis_lock(f'add_command_for_player_redis_key_{client_id}', client_id=None):
+            assert command.client_id is not None
             if command.client_id in commands_by_player:
                 l = commands_by_player[command.client_id]
                 commands_by_player[command.client_id] = [c for c in l if datetime.fromtimestamp(json.loads(c)['time']) > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]

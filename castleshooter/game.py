@@ -170,13 +170,15 @@ def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
     player: Optional[Player] = None
     player_client_id = None
     for player in snap_to_run_forward_from.players:
+        assert player is not None
         player_client_id = player.client_id
         player_ids_commands_have_been_run_for.add(player_client_id)
         raw_commands_for_player = raw_commands_by_player.get(player_client_id) or []
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)
         player = _run_commands_for_player(snap_to_run_forward_from.time, player.copy(), commands_for_player, player_client_id)
-        final_players.append(player)
+        if player:
+            final_players.append(player)
 
     for player_client_id, raw_commands_for_player in raw_commands_by_player.items():
         if player_client_id in player_ids_commands_have_been_run_for:
