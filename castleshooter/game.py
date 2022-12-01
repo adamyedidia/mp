@@ -51,6 +51,7 @@ class Game:
                     run = False
                 
                 if event.type == pygame.MOUSEBUTTONDOWN:
+                    assert client.id is not None
                     send_move_command(self.s, x_pos=event.pos[0], y_pos=event.pos[1], client_id=client.id)
 
             keys = pygame.key.get_pressed()
@@ -123,10 +124,15 @@ def _move_player(player: Optional[Player], *, prev_time: datetime, next_time: da
 
 def _run_commands_for_player(starting_time: datetime, player: Optional[Player], 
                              commands_for_player: list[Command], 
-                             player_client_id: int) -> Optional[Player]:
+                             player_client_id: int,
+                             end_time: Optional[datetime] = None) -> Optional[Player]:
+    if end_time is None:
+        end_time = datetime.now()
     current_time = starting_time
     for command in commands_for_player:
         if player is None and command.type != CommandType.SPAWN:
+            continue
+        if command.time < starting_time:
             continue
         _move_player(player, prev_time=current_time, next_time=command.time)
         if command.type == CommandType.MOVE:
@@ -138,30 +144,49 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             assert command.data is not None
             player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'])        
         current_time = command.time
-    _move_player(player, prev_time=current_time, next_time=datetime.now())
+    _move_player(player, prev_time=current_time, next_time=end_time)
 
     return player
+
+
+def lists_are_equal(l1: list[str], l2: list[str]) -> bool:
+    if len(l1) != len(l2):
+        return False
+    for i in range(len(l1)):
+        if l1[i] != l2[i]:
+            return False
+    return True
+
+
+last_raw_commands = []
+last_raw_snaps = []
+last_game_state_inferred = None
+last_time = None
 
 
 def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
     raw_snaps = get_game_state_snapshots(client_id=client_id)
     assert len(raw_snaps) > 0
     raw_snap_to_run_forward_from = raw_snaps[0] if len(raw_snaps) == 1 else raw_snaps[-1]
+    # raw_snap_to_run_forward_from = raw_snaps[0]
     snap_to_run_forward_from = GameState.from_json(json.loads(raw_snap_to_run_forward_from))
     if client_id is None:
         if len(snap_to_run_forward_from.players) > 0:
+            # import IPython
+            # IPython.embed()
             print(snap_to_run_forward_from.players[0].x,snap_to_run_forward_from.players[0].y)
     raw_commands_by_player = get_commands_by_player(client_id=client_id)
     player_ids_commands_have_been_run_for: set[int] = set()
     final_players: list[Player] = []
     player: Optional[Player] = None
+    player_client_id = None
     for player in snap_to_run_forward_from.players:
         player_client_id = player.client_id
         player_ids_commands_have_been_run_for.add(player_client_id)
         raw_commands_for_player = raw_commands_by_player.get(player_client_id) or []
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)
-        player = _run_commands_for_player(snap_to_run_forward_from.time, player, commands_for_player, player_client_id)
+        player = _run_commands_for_player(snap_to_run_forward_from.time, player.copy(), commands_for_player, player_client_id)
         final_players.append(player)
 
     for player_client_id, raw_commands_for_player in raw_commands_by_player.items():
@@ -173,6 +198,32 @@ def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
         player = _run_commands_for_player(snap_to_run_forward_from.time, None, commands_for_player, player_client_id)
         if player:
             final_players.append(player)
+
+    game_state = GameState(players=final_players, time=datetime.now())
+    game_state_inferred = json.dumps(game_state.to_json())
+    global last_game_state_inferred
+    global last_raw_commands
+    global last_raw_snaps
+    global last_time
+
+    # if (player_client_id is not None and (not lists_are_equal(raw_commands_by_player[player_client_id], last_raw_commands)
+    #         or not lists_are_equal(raw_snaps, last_raw_snaps))):
+    if (player_client_id is not None and (not lists_are_equal(raw_snaps, last_raw_snaps))):            
+        if player_client_id is not None:
+            print(f'last_raw_commands: {last_raw_commands}\n')
+            print(f'last_raw_snaps: {last_raw_snaps}\n')
+            print(f'last_game_state_inferred: {last_game_state_inferred}\n')          
+            print(f'last_time: {last_time}\n')      
+            print(f'raw_commands: {raw_commands_by_player[player_client_id]}\n')  
+            print(f'raw_snaps: {raw_snaps}\n')
+            print(f'game_state_inferred: {game_state_inferred}\n')
+            print(f'current time: {datetime.now()}\n')
+
+    last_raw_commands = raw_commands_by_player.get(player_client_id) or []
+    last_raw_snaps = raw_snaps
+    last_game_state_inferred = game_state_inferred
+    last_time = datetime.now()
+
     return GameState(players=final_players, time=datetime.now())
 
         

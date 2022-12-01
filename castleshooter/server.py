@@ -1,4 +1,5 @@
 import json
+from utils import SNAPSHOTS_CREATED_EVERY
 from command import Command, store_command
 from settings import PORT, SERVER
 import socket
@@ -109,7 +110,7 @@ def _handle_outgoing_player_state_connection(connection: Connection, game_state:
     while True:
         game.infer_and_store_game_state_snap()
 
-        sleep(1)
+        sleep(SNAPSHOTS_CREATED_EVERY)
 
 
     # while True:

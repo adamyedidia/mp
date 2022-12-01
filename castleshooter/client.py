@@ -15,10 +15,12 @@ import json
 from json.decoder import JSONDecodeError
 from game import GameState, game_state_snapshots
 from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY
+from time import sleep
 
 
 def start_up_game(socket: Any) -> None:
     assert client.id is not None
+    sleep(0.5)
     send_spawn_command(socket, 50, 50, client_id=client.id)    
     g = game.Game(500,500, client, socket)
     g.run()    
@@ -116,17 +118,21 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
 
 def client_main() -> None:
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((SERVER, PORT))
-    print('connected to server!')
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((SERVER, PORT))
+        print('connected to server!')
 
-    print('initialized game!')
-    thread = Thread(target=listen_for_server_updates, args=(s,True))
-    thread.start()
-    print('Listening for server updates!')
-    thread.join()
-    start_new_thread(listen_for_server_updates, (s,))
-    start_up_game(s)
+        print('initialized game!')
+        thread = Thread(target=listen_for_server_updates, args=(s,True))
+        thread.start()
+        print('Listening for server updates!')
+        thread.join()
+        start_new_thread(listen_for_server_updates, (s,))
+        start_up_game(s)
+    finally:
+        print('Closing the socket!!')
+        s.close()
 
 if __name__ == '__main__':
     client_main()
