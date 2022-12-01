@@ -56,8 +56,9 @@ def _handle_payload_from_server(payload: str) -> None:
 
         if 'commands_by_player' in key:
             raw_commands_by_player = get_commands_by_player(client_id=client.id)
-            raw_commands_by_player_from_server = json.loads(data)
+            raw_commands_by_player_from_server = {int(key): val for key, val in json.loads(data).items()}
             player_ids_handled: set[int] = set()
+            global commands_by_player
             for player_id, raw_commands in raw_commands_by_player.items():
                 player_ids_handled.add(player_id)
                 commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands], 
