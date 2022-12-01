@@ -6,6 +6,7 @@ from socket import socket
 from typing import Optional
 import pygame
 from pygame import Color
+from direction import determine_direction_from_keyboard, to_optional_direction
 from command import Command, CommandType, get_commands_by_player
 
 from redis_utils import redis_lock, rget, rset
@@ -13,8 +14,9 @@ from redis_utils import redis_lock, rget, rset
 from player import Player
 from canvas import Canvas
 from client_utils import Client, client
+from direction import direction_to_unit_vector
 
-from packet import send_move_command, send_without_retry
+from packet import send_move_command, send_without_retry, send_turn_command
 from json.decoder import JSONDecodeError
 
 from utils import MAX_GAME_STATE_SNAPSHOTS
@@ -45,23 +47,27 @@ class Game:
                 continue
 
             for event in pygame.event.get():
+                print(event.type)
                 if event.type == pygame.QUIT:
                     run = False
 
-                if event.type == pygame.K_ESCAPE:
-                    run = False
-                
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     assert client.id is not None
                     send_move_command(self.s, x_pos=event.pos[0], y_pos=event.pos[1], client_id=client.id)
 
-            keys = pygame.key.get_pressed()
+                if event.type in [pygame.KEYUP, pygame.KEYDOWN]:
+                    if event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_RIGHT, pygame.K_RIGHT, 
+                                     pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
+                        direction = determine_direction_from_keyboard()
+                        send_turn_command(self.s, direction, client_id=client.id)
+                    elif event.key == pygame.K_ESCAPE:
+                        run = False
 
-            for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
-                if keys[input]:
-                    self.player.move(input)
-                    self.player.make_valid_position(self.width, self.height)
-                    self.send_data()
+            # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
+            #     if keys[input]:
+            #         self.player.move(input)
+            #         self.player.make_valid_position(self.width, self.height)
+            #         self.send_data()
 
             # Update Canvas
             self.canvas.draw_background()
@@ -110,9 +116,9 @@ def _move_player(player: Optional[Player], *, prev_time: datetime, next_time: da
     if player is None:
         return
     time_elapsed_since_last_command = (next_time - prev_time).total_seconds()
+    distance_traveled = player.speed * time_elapsed_since_last_command    
     if player.dest_x is not None and player.dest_y is not None:
         distance_to_dest = sqrt((player.x - player.dest_x)**2 + (player.y - player.dest_y)**2)
-        distance_traveled = player.speed * time_elapsed_since_last_command
         to_dest_unit_vector_x = (player.dest_x - player.x) / distance_to_dest if distance_to_dest > 0 else 0
         to_dest_unit_vector_y = (player.dest_y - player.y) / distance_to_dest if distance_to_dest > 0 else 0
         if distance_to_dest < distance_traveled or distance_to_dest <= 0:
@@ -121,6 +127,10 @@ def _move_player(player: Optional[Player], *, prev_time: datetime, next_time: da
         else:
             player.x += int(to_dest_unit_vector_x * distance_traveled)
             player.y += int(to_dest_unit_vector_y * distance_traveled)
+    elif player.direction is not None:
+        unit_vector_x, unit_vector_y = direction_to_unit_vector(player.direction)
+        player.x += int(unit_vector_x * distance_traveled)
+        player.y += int(unit_vector_y * distance_traveled)
 
 
 def _run_commands_for_player(starting_time: datetime, player: Optional[Player], 
@@ -143,7 +153,13 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             player.dest_y = command.data['y']
         elif command.type == CommandType.SPAWN:
             assert command.data is not None
-            player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'])        
+            player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'])      
+        elif command.type == CommandType.TURN:
+            assert player is not None
+            assert command.data is not None
+            player.direction = to_optional_direction(command.data['dir'])
+            player.dest_x = None
+            player.dest_y = None
         current_time = command.time
     _move_player(player, prev_time=current_time, next_time=end_time)
 

@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 import gevent
+from direction import Direction
 from command import Command, CommandType, store_command
 from redis_utils import redis_lock, rget, rset, rlisten
 from utils import to_optional_int
@@ -126,3 +127,10 @@ def send_spawn_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> 
     send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
                         type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
                         data={'x': x_pos, 'y': y_pos}), client_id=client_id)
+
+
+def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: int) -> None:
+    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                 type=CommandType.TURN, time=datetime.now(), client_id=client_id, 
+                 data={'dir': direction.value if direction else None}),
+                 client_id=client_id)

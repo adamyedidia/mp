@@ -15,6 +15,7 @@ commands_by_player: dict[int, list[str]] = defaultdict(list)
 class CommandType(Enum):
     MOVE = 'move'
     SPAWN = 'spawn'
+    TURN = 'TURN'
 
 
 class Command():
