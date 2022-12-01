@@ -48,10 +48,8 @@ def rget(key: str, *, client_id: Optional[int]) -> Optional[str]:
 def rlisten(keys: list[str], callback: Callable[[str, Optional[str]], None]) -> None:
     pubsub = redis.pubsub()
     for key in keys:
-        print(key)
         pubsub.subscribe(_get_redis_key(key, client_id=None))
     for item in pubsub.listen():
-        print(item)
         if item['type'] == 'message':
             raw_channel = to_optional_str(item['channel'])
             assert raw_channel is not None
