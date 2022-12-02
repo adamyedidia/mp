@@ -31,6 +31,9 @@ class Connection:
         return f"<Connection {self.id}: {self.addr}>"
 
 
+stored_packets = []
+
+
 class GameState:
     def set_active_players(self, active_connections_by_id: dict):
         client_ids = active_connections_by_id.keys()
@@ -54,35 +57,43 @@ class GameState:
             assert packet.client_id is not None
             store_command(Command.from_json(json.loads(data)), client_id=None, for_client=packet.client_id)
             
+
+    def _handle_datum(self, datum: str, )
+
+
     def handle_data_from_client(self, raw_data: str, conn: Any):
         for datum in raw_data.split(';'):
             if datum:
-                print(f'received: {datum}')
-                packet = Packet.from_str(datum)
-                packet_id = packet.id
-                payload = packet.payload
-                if packet.is_ack:
-                    assert packet_id is not None
-                    # Record in redis that the message has been acked
-                    print(f'Received ack for {packet}')
-                    rset(packet_ack_redis_key(packet_id), '1', client_id=None)
-                elif packet_id is None:
-                    assert payload is not None
-                    self.handle_payload_from_client(payload, packet)
-                else:
-                    assert payload is not None
-                    with redis_lock(f'handle_payload_from_client|{packet.client_id}|{packet.id}', 
-                                    client_id=None):
-                        handled_redis_key = packet_handled_redis_key(packet_id, 
-                                                                    for_client=packet.client_id)
-                        # Want to make sure not to handle the same packet twice due to a re-send, 
-                        # if our ack didn't get through
-                        if not rget(handled_redis_key, client_id=None):
-                            self.handle_payload_from_client(payload, packet)
-                            send_ack(conn, packet_id)
-                            rset(handled_redis_key, '1', client_id=None)
-                        else:
-                            print(f'Ignoring {packet} because this packet has already been handled')
+                try:
+                    print(f'received: {datum}')
+                    packet = Packet.from_str(datum)
+                    packet_id = packet.id
+                    payload = packet.payload
+                    if packet.is_ack:
+                        assert packet_id is not None
+                        # Record in redis that the message has been acked
+                        print(f'Received ack for {packet}')
+                        rset(packet_ack_redis_key(packet_id), '1', client_id=None)
+                    elif packet_id is None:
+                        assert payload is not None
+                        self.handle_payload_from_client(payload, packet)
+                    else:
+                        assert payload is not None
+                        with redis_lock(f'handle_payload_from_client|{packet.client_id}|{packet.id}', 
+                                        client_id=None):
+                            handled_redis_key = packet_handled_redis_key(packet_id, 
+                                                                        for_client=packet.client_id)
+                            # Want to make sure not to handle the same packet twice due to a re-send, 
+                            # if our ack didn't get through
+                            if not rget(handled_redis_key, client_id=None):
+                                self.handle_payload_from_client(payload, packet)
+                                send_ack(conn, packet_id)
+                                rset(handled_redis_key, '1', client_id=None)
+                            else:
+                                print(f'Ignoring {packet} because this packet has already been handled')
+                except Exception as e:
+                    print(f'Ignoring {datum} because of exception: {e}')
+                    stored_packets.append(datum)
 
 
 def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> int:

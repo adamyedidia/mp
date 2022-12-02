@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 import gevent
+from settings import TEST_LAG
 from direction import Direction
 from command import Command, CommandType, store_command
 from redis_utils import redis_lock, rget, rset, rlisten
@@ -96,6 +97,8 @@ def send_with_retry(conn: Any, message: str, client_id: Optional[int]) -> bool:
 
 
 def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> None:
+    if TEST_LAG > 0:
+        sleep(TEST_LAG)
     packet = Packet(client_id=client_id, payload=message)
     print(f'Sending without retry {packet}')    
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
