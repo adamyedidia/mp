@@ -71,9 +71,6 @@ class Game:
                 if self.player.y <= self.height - self.player.velocity:
                     self.player.move(3)
 
-            # Send Network Stuff
-            self.player2.x, self.player2.y = self.parse_data(self.send_data())
-
             # Update Canvas
             self.canvas.draw_background()
             self.player.draw(self.canvas.get_canvas())
@@ -90,14 +87,6 @@ class Game:
         data = str(self.net.id) + ":" + str(self.player.x) + "," + str(self.player.y)
         reply = self.net.send(data)
         return reply
-
-    @staticmethod
-    def parse_data(data):
-        try:
-            d = data.split(":")[1].split(",")
-            return int(d[0]), int(d[1])
-        except:
-            return 0,0
 
 
 class Canvas:

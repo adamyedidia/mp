@@ -47,7 +47,6 @@ class Game:
                 continue
 
             for event in pygame.event.get():
-                print(event.type)
                 if event.type == pygame.QUIT:
                     run = False
 
@@ -178,7 +177,7 @@ def lists_are_equal(l1: list[str], l2: list[str]) -> bool:
 def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
     raw_snaps = get_game_state_snapshots(client_id=client_id)
     assert len(raw_snaps) > 0
-    raw_snap_to_run_forward_from = raw_snaps[0] if len(raw_snaps) == 1 else raw_snaps[-1]
+    raw_snap_to_run_forward_from = raw_snaps[0] if len(raw_snaps) < 3 else raw_snaps[-2]
     snap_to_run_forward_from = GameState.from_json(json.loads(raw_snap_to_run_forward_from))
     raw_commands_by_player = get_commands_by_player(client_id=client_id)
     player_ids_commands_have_been_run_for: set[int] = set()
