@@ -42,7 +42,6 @@ def _clear_stored_data(stored_data: list[str]) -> None:
 class GameState:
     def set_active_players(self, active_connections_by_id: dict):
         client_ids = active_connections_by_id.keys()
-        print(f'client_ids: {client_ids}')
         rset('active_players', ','.join(str(i) for i in client_ids), client_id=None)
 
     def get_active_players(self) -> list[int]:
@@ -125,7 +124,7 @@ def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> i
 def _handle_incoming_connection(connection: Connection, game_state: GameState) -> None:
     print('handling incoming connection!')
     while True:
-        data = connection.conn.recv(4096).decode()
+        data = connection.conn.recv(65536).decode()
         game_state.handle_data_from_client(data, connection.conn)
 
 

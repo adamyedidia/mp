@@ -120,7 +120,7 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
 def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
     while True:
         global stored_data
-        raw_data = socket.recv(4096).decode()
+        raw_data = socket.recv(65536).decode()
         for datum in raw_data.split(';'):
             # Sometimes packets get split by TCP or something, 
             # so if we fail to process a packet successfully, we store it and instead try processing it concatenated
