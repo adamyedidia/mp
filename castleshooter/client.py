@@ -19,8 +19,10 @@ from time import sleep
 
 
 def start_up_game(socket: Any) -> None:
+    print('starting up game!')
     assert client.id is not None
     sleep(0.5)
+    print('Sending the spawn command!')
     send_spawn_command(socket, 50, 50, client_id=client.id)    
     g = game.Game(500,500, client, socket)
     g.run()    
@@ -76,40 +78,72 @@ def _handle_payload_from_server(payload: str) -> None:
                 commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]                                             
 
 
+stored_data: list[str] = []
+
+
+def _clear_stored_data(stored_data: list[str]) -> None:
+    while stored_data:
+        del stored_data[0]
+
+
+# Returns whether or not it's the client_id packet at the beginning
+def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool:
+    print(f'received: {datum}')
+    packet = Packet.from_str(datum)
+    packet_id = packet.id
+    payload = packet.payload
+    if packet.is_ack:
+        assert packet_id is not None
+        # Record in redis that the message has been acked
+        rset(packet_ack_redis_key(packet_id), '1', client_id=client.id)
+    elif packet_id is None:
+        assert payload is not None
+        _handle_payload_from_server(payload)
+    else:
+        assert payload is not None
+        handled_redis_key = packet_handled_redis_key(packet_id, for_client=None)
+        # Want to make sure not to handle the same packet twice due to a re-send, 
+        # if our ack didn't get through
+        if not rget(handled_redis_key, client_id=client.id or -1):
+            if client_id_only:
+                if _handle_client_id_packet(payload):
+                    return True
+            else:
+                _handle_payload_from_server(payload)
+            send_ack(socket, packet_id)
+            rset(handled_redis_key, '1', client_id=client.id or -1)
+        else:
+            print(f'Ignoring {packet} because this packet has already been handled')
+    return False
+
+
 def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
     while True:
+        global stored_data
         raw_data = socket.recv(4096).decode()
         for datum in raw_data.split(';'):
+            # Sometimes packets get split by TCP or something, 
+            # so if we fail to process a packet successfully, we store it and instead try processing it concatenated
+            # to the next packet            
             if datum:
                 try:
-                    print(f'received: {datum}')
-                    packet = Packet.from_str(datum)
-                    packet_id = packet.id
-                    payload = packet.payload
-                    if packet.is_ack:
-                        assert packet_id is not None
-                        # Record in redis that the message has been acked
-                        rset(packet_ack_redis_key(packet_id), '1', client_id=client.id)
-                    elif packet_id is None:
-                        assert payload is not None
-                        _handle_payload_from_server(payload)
-                    else:
-                        assert payload is not None
-                        handled_redis_key = packet_handled_redis_key(packet_id, for_client=None)
-                        # Want to make sure not to handle the same packet twice due to a re-send, 
-                        # if our ack didn't get through
-                        if not rget(handled_redis_key, client_id=client.id or -1):
-                            if client_id_only:
-                                if _handle_client_id_packet(payload):
-                                    return
-                            else:
-                                _handle_payload_from_server(payload)
-                            send_ack(socket, packet_id)
-                            rset(handled_redis_key, '1', client_id=client.id or -1)
+                    if _handle_datum(socket, datum, client_id_only=client_id_only) and client_id_only:
+                        return
+                except Exception as e1:
+                    stored_data.append(datum)
+                    if len(stored_data) > 1:
+                        joint_datum = ''.join(stored_data)
+                        try:
+                            if _handle_datum(socket, ''.join(stored_data), client_id_only=client_id_only) and client_id_only:
+                                return
+                        except Exception as e2:
+                            print(f'Ignoring {joint_datum} because of exception: {e2}')
                         else:
-                            print(f'Ignoring {packet} because this packet has already been handled')
-                except Exception as e:
-                    print(f'Ignoring datum {datum} because of exception: {e}')
+                            _clear_stored_data(stored_data)
+                    else:
+                        print(f'Ignoring {datum} because of exception: {e1}')
+                else:
+                    _clear_stored_data(stored_data)
 
 
 def client_main() -> None:
