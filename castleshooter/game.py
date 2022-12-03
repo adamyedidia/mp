@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from math import sqrt
 import random
@@ -144,6 +144,8 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             continue
         if command.time < starting_time:
             continue
+        if command.time > end_time:
+            break
         _move_player(player, prev_time=current_time, next_time=command.time)
         if command.type == CommandType.MOVE:
             assert player is not None
@@ -174,10 +176,15 @@ def lists_are_equal(l1: list[str], l2: list[str]) -> bool:
     return True
 
 
-def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
+def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional[int] = None) -> GameState:
+    if end_time is None:
+        end_time = datetime.now()
     raw_snaps = get_game_state_snapshots(client_id=client_id)
     assert len(raw_snaps) > 0
-    raw_snap_to_run_forward_from = raw_snaps[0] if len(raw_snaps) < 3 else raw_snaps[-2]
+    if client_id is not None:
+        raw_snap_to_run_forward_from = raw_snaps[0] if (len(raw_snaps) < 2) else raw_snaps[-2]
+    else:
+        raw_snap_to_run_forward_from = raw_snaps[0]
     snap_to_run_forward_from = GameState.from_json(json.loads(raw_snap_to_run_forward_from))
     raw_commands_by_player = get_commands_by_player(client_id=client_id)
     player_ids_commands_have_been_run_for: set[int] = set()
@@ -191,7 +198,8 @@ def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
         raw_commands_for_player = raw_commands_by_player.get(player_client_id) or []
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)
-        player = _run_commands_for_player(snap_to_run_forward_from.time, player.copy(), commands_for_player, player_client_id)
+        player = _run_commands_for_player(snap_to_run_forward_from.time, player.copy(), commands_for_player, player_client_id,
+                                          end_time=end_time)
         if player:
             final_players.append(player)
 
@@ -201,18 +209,26 @@ def infer_game_state(*, client_id: Optional[int] = None) -> GameState:
         player_ids_commands_have_been_run_for.add(player_client_id)
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)        
-        player = _run_commands_for_player(snap_to_run_forward_from.time, None, commands_for_player, player_client_id)
+        player = _run_commands_for_player(snap_to_run_forward_from.time, None, commands_for_player, player_client_id,
+                                          end_time=end_time)
         if player:
             final_players.append(player)
 
-    return GameState(players=final_players, time=datetime.now())
+    return GameState(players=final_players, time=end_time)
+
+
+num_snaps_inferred = 0
 
         
 def infer_and_store_game_state_snap() -> None:
-    game_state_snapshots = get_game_state_snapshots()
-    new_snapshot = infer_game_state(client_id=None)
+    global num_snaps_inferred
+    num_snaps_inferred += 1
+    game_state_snapshots: list[str] = get_game_state_snapshots()
+    new_snapshot = infer_game_state(client_id=None, end_time=datetime.now() - timedelta(seconds=3))
     game_state_snapshots.append(json.dumps(new_snapshot.to_json()))
-    if len(game_state_snapshots) > MAX_GAME_STATE_SNAPSHOTS:
-        del game_state_snapshots[0]
+    if num_snaps_inferred % 8 == 0:
+        print(f'Culling snapshots: {len(game_state_snapshots)}')
+        game_state_snapshots = [s for s in game_state_snapshots if datetime.now() - datetime.fromtimestamp(json.loads(s)['time']) < timedelta(seconds=7)]
+        print(f'Culling snapshots: {len(game_state_snapshots)}')        
     rset('game_state_snapshots', json.dumps(game_state_snapshots), client_id=None)
     rset('most_recent_game_state_snapshot', json.dumps(new_snapshot.to_json()), client_id=None)

@@ -70,7 +70,7 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
                            client_id: Optional[int]) -> bool:
     packet_id = packet.id
     assert packet_id is not None
-    print(f'Sending {packet}')
+    # print(f'Sending {packet}')
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
     sleep(wait_time)
 
@@ -89,10 +89,10 @@ def send_with_retry(conn: Any, message: str, client_id: Optional[int]) -> bool:
     for i, wait_time in enumerate(wait_times):
         if _send_with_retry_inner(conn, packet, wait_time, client_id=client_id):
             return True
-        debug_msg = f'Did not get a response in {wait_time} for {packet}'
-        if i < len(wait_times) - 1:
-            debug_msg = f'{debug_msg}, retrying...'
-        print(debug_msg)
+        # debug_msg = f'Did not get a response in {wait_time} for {packet}'
+        # if i < len(wait_times) - 1:
+        #     debug_msg = f'{debug_msg}, retrying...'
+        # print(debug_msg)
     return False
 
 
@@ -106,7 +106,7 @@ def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> 
 
 def send_ack(conn: Any, packet_id: int) -> None:
     packet = Packet(id=packet_id, is_ack=True)
-    print(f'Acking {packet}')        
+    # print(f'Acking {packet}')        
     conn.sendall(bytes(packet.to_str(), 'utf-8'))    
 
 
