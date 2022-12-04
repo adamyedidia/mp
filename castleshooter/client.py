@@ -45,7 +45,7 @@ def _handle_payload_from_server(payload: str) -> None:
 
         if 'most_recent_game_state_snapshot' in key:
             try:
-                json.loads(GameState.from_json(json.loads(data)))
+                json.loads(data)
             except JSONDecodeError as e:
                 print(f'Ignoring unparseable snap from server: {data[:LOG_CUTOFF]}')
             game_state_snapshots.append(data)
