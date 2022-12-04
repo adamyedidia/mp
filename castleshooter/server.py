@@ -1,5 +1,5 @@
 import json
-from utils import SNAPSHOTS_CREATED_EVERY
+from utils import SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
 from command import Command, store_command
 from settings import PORT, SERVER
 import socket
@@ -63,7 +63,7 @@ class GameState:
             
 
     def _handle_datum(self, conn: Any, datum: str) -> None:
-        print(f'received: {datum}')
+        print(f'received: {datum[:LOG_CUTOFF]}\n')
         packet = Packet.from_str(datum)
         packet_id = packet.id
         payload = packet.payload
@@ -106,11 +106,11 @@ class GameState:
                         try:
                             self._handle_datum(conn, ''.join(stored_data))
                         except Exception as e2:
-                            print(f'Ignoring {joint_datum} because of exception: {e2}')
+                            print(f'Ignoring {joint_datum[:LOG_CUTOFF]} because of exception: {e2}')
                         else:
                             _clear_stored_data(stored_data)
                     else:
-                        print(f'Ignoring {datum} because of exception: {e1}')
+                        print(f'Ignoring {datum[:LOG_CUTOFF]} because of exception: {e1}')
                 else:
                     _clear_stored_data(stored_data)
 

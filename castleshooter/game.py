@@ -19,7 +19,7 @@ from direction import direction_to_unit_vector
 from packet import send_move_command, send_without_retry, send_turn_command
 from json.decoder import JSONDecodeError
 
-from utils import MAX_GAME_STATE_SNAPSHOTS
+from utils import MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF
 
 class Game:
     def __init__(self, w: int, h: int, client: Client, socket: socket):
@@ -78,7 +78,7 @@ class Game:
 
     def send_data(self) -> None:
         data = f'player_state_{self.player_number}|{self.player.to_json()}'
-        print(f'Sending: {data}')
+        print(f'Sending: {data[:LOG_CUTOFF]}\n')
         send_without_retry(self.s, data, client_id=client.id)
 
 
@@ -226,9 +226,9 @@ def infer_and_store_game_state_snap() -> None:
     game_state_snapshots: list[str] = get_game_state_snapshots()
     new_snapshot = infer_game_state(client_id=None, end_time=datetime.now() - timedelta(seconds=3))
     game_state_snapshots.append(json.dumps(new_snapshot.to_json()))
-    # if num_snaps_inferred % 8 == 0:
-    #     print(f'Culling snapshots: {len(game_state_snapshots)}')
-    #     game_state_snapshots = [s for s in game_state_snapshots if datetime.now() - datetime.fromtimestamp(json.loads(s)['time']) < timedelta(seconds=7)]
-    #     print(f'Culling snapshots: {len(game_state_snapshots)}')        
+    if num_snaps_inferred % 8 == 0:
+        print(f'Culling snapshots: {len(game_state_snapshots)}')
+        game_state_snapshots = [s for s in game_state_snapshots if datetime.now() - datetime.fromtimestamp(json.loads(s)['time']) < timedelta(seconds=7)]
+        print(f'Culling snapshots: {len(game_state_snapshots)}')        
     rset('game_state_snapshots', json.dumps(game_state_snapshots), client_id=None)
     rset('most_recent_game_state_snapshot', json.dumps(new_snapshot.to_json()), client_id=None)

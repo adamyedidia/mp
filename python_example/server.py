@@ -29,7 +29,7 @@ def threaded_client(conn, p, gameId):
     reply = ""
     while True:
         try:
-            data = conn.recv(65536).decode()
+            data = conn.recv(1048576).decode()
 
             if gameId in games:
                 game = games[gameId]
