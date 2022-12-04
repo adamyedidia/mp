@@ -48,6 +48,7 @@ def _handle_payload_from_server(payload: str) -> None:
                 json.loads(data)
             except JSONDecodeError as e:
                 print(f'Ignoring unparseable snap from server: {data[:LOG_CUTOFF]}')
+                return
             game_state_snapshots.append(data)
             if len(game_state_snapshots) > MAX_GAME_STATE_SNAPSHOTS:
                 del game_state_snapshots[0]
