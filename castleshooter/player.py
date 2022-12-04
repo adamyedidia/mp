@@ -25,23 +25,13 @@ class Player():
         self.healthbar: HealthBar = healthbar if healthbar is not None else HealthBar()
         self.item: Item = Sword()
 
-        self.speed: int = 100
+        self.speed: int = 200
         self.color = color
 
     def draw(self, g: pygame.surface.Surface):
         pygame.draw.rect(g, self.color ,(self.x, self.y, self.width, self.height), 0)
         self.healthbar.draw(g, self.x, self.y)
         self.item.draw(g, self.x, self.y)
-
-    def move(self, input: int) -> None:
-        if input == pygame.K_RIGHT:
-            self.x += self.speed
-        elif input == pygame.K_LEFT:
-            self.x -= self.speed
-        elif input == pygame.K_UP:
-            self.y -= self.speed
-        elif input == pygame.K_DOWN:
-            self.y += self.speed
 
     def make_valid_position(self, w: int, h: int) -> None:
         self.x = max(0, self.x)
