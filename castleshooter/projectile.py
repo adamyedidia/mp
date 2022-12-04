@@ -22,9 +22,7 @@ class ProjectileType(Enum):
 
 class Projectile:
     def __init__(self, id: int, startx: int, starty: int, type: ProjectileType,
-                 player_id: int,
-                 dest_x: Optional[int] = None, dest_y: Optional[int] = None, 
-                 source_x: Optional[int] = None, source_y: Optional[int] = None):
+                 player_id: int, dest_x: int, dest_y: int, source_x: int, source_y: int):
         self.id = id
         self.player_id = player_id
         self.x = startx
@@ -34,7 +32,7 @@ class Projectile:
         self.source_x = source_x
         self.source_y = source_y
 
-        self.speed: int = 800
+        self.speed: int = 300
         self.type: ProjectileType = type
 
 
@@ -45,15 +43,15 @@ class Projectile:
             end = (self.x, self.y)
             vector_from_source_to_dest = (self.dest_x - self.source_x, self.dest_y - self.source_y)
             vector_from_source_to_dest_mag = math.sqrt(vector_from_source_to_dest[0] ** 2 + vector_from_source_to_dest[1] ** 2)
-            unit_vector_from_source_to_dest = (vector_from_source_to_dest_mag[0] / vector_from_source_to_dest_mag,
-                                               vector_from_source_to_dest_mag[1] / vector_from_source_to_dest_mag)
+            unit_vector_from_source_to_dest = (vector_from_source_to_dest[0] / vector_from_source_to_dest_mag,
+                                               vector_from_source_to_dest[1] / vector_from_source_to_dest_mag)
             start = (end[0] - unit_vector_from_source_to_dest[0] * arrow_length, 
                      end[1] - unit_vector_from_source_to_dest[1] * arrow_length)
             draw_arrow(g, color, start, end)
 
     def to_json(self):
         return json.dumps({
-            'id': self.client_id,
+            'id': self.id,
             'x': self.x,
             'y': self.y,
             'player_id': self.player_id,
@@ -69,11 +67,10 @@ class Projectile:
     def from_json(cls, d: dict) -> 'Projectile':
         if isinstance(d, str):
             d = json.loads(d)
-        return Projectile(id=d['id'], startx=d['x'], starty=d['y'], type=ProjectileType(d['type']),
+        return Projectile(id=d['id'], startx=d['source_x'], starty=d['source_y'], type=ProjectileType(d['type']),
                           player_id=d['player_id'],
-                          dest_x=to_optional_int(d['dest_x']), dest_y=to_optional_int(d['dest_y']),
-                          source_x = to_optional_int(d['source_x']), source_y=to_optional_int(d['source_y']),
-                          direction=to_optional_direction(d['direction']))
+                          dest_x=int(d['dest_x']), dest_y=int(d['dest_y']),
+                          source_x = int(d['source_x']), source_y=int(d['source_y']))
 
     def copy(self) -> 'Projectile':
         return Projectile.from_json(self.to_json())            
