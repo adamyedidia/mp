@@ -124,7 +124,7 @@ def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> i
 def _handle_incoming_connection(connection: Connection, game_state: GameState) -> None:
     print('handling incoming connection!')
     while True:
-        data = connection.conn.recv(65536).decode()
+        data = connection.conn.recv(1048576).decode()
         game_state.handle_data_from_client(data, connection.conn)
 
 
@@ -135,7 +135,7 @@ def _handle_outgoing_active_players_connection(connection: Connection) -> None:
     rlisten(_SUBSCRIPTION_KEYS, _handle_change)
 
 
-def _handle_outgoing_player_state_connection(connection: Connection, game_state: GameState) -> None:
+def _handle_server_state() -> None:
     while True:
         game.infer_and_store_game_state_snap()
 
@@ -160,6 +160,8 @@ def main() -> None:
 
     game_state = GameState()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    start_new_thread(_handle_server_state, tuple([]))
     try:
         s.bind((socket.gethostbyname(socket.gethostname()), PORT))
         s.listen()
@@ -181,7 +183,6 @@ def main() -> None:
 
             start_new_thread(_handle_incoming_connection, (connection, game_state))
             start_new_thread(_handle_outgoing_active_players_connection, (connection,))
-            start_new_thread(_handle_outgoing_player_state_connection, (connection, game_state))
 
             print(f'New connection: {connection}')
     except BaseException as e:
