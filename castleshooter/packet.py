@@ -106,9 +106,10 @@ def send_with_test_lag(conn: Any, message: str, lag: float, *, client_id: Option
 def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> None:
     if TEST_LAG:
         start_new_thread(send_with_test_lag, (conn, message, TEST_LAG), {'client_id': client_id})
-    packet = Packet(client_id=client_id, payload=message)
-    print(f'Sending without retry {packet}')    
-    conn.sendall(bytes(packet.to_str(), 'utf-8'))
+    else:
+        packet = Packet(client_id=client_id, payload=message)
+        print(f'Sending without retry {packet}')    
+        conn.sendall(bytes(packet.to_str(), 'utf-8'))
 
 
 def send_ack(conn: Any, packet_id: int) -> None:
