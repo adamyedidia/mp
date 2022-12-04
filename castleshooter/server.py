@@ -16,7 +16,6 @@ import game
 
 
 _SUBSCRIPTION_KEYS = ['active_players', 
-                      *[f'player_state_{n}' for n in range(100)],
                       'most_recent_game_state_snapshot',
                       'commands_by_player']
 
@@ -48,15 +47,8 @@ class GameState:
         active_players = rget('active_players', client_id=None) or ''
         return [int(i) for i in active_players.split(',')]
 
-    def get_player_state(self, player_number: int, packet: Packet) -> Optional[str]:
-        return rget(f'player_state_{player_number}', client_id=None)
-
     def handle_payload_from_client(self, payload: str, packet: Packet):
-        if payload.startswith('player_state'):
-            pass
-            # key, data = payload.split('|')
-            # rset(key, data, client_id=None)
-        elif payload.startswith('command'):
+        if payload.startswith('command'):
             _, data = payload.split('|')
             assert packet.client_id is not None
             store_command(Command.from_json(json.loads(data)), client_id=None, for_client=packet.client_id)
