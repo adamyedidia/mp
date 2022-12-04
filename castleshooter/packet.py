@@ -148,9 +148,9 @@ def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: i
                  client_id=client_id)
 
 
-def send_shoot_command(conn: Any, projectile_id: int, source_x: int, source_y: int, dest_x: int, dest_y: int, type: ProjectileType,
+def send_spawn_projectile_command(conn: Any, projectile_id: int, source_x: int, source_y: int, dest_x: int, dest_y: int, type: ProjectileType,
                        *, client_id: int) -> None:
     send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
-                 type=CommandType.SHOOT, time=datetime.now(), client_id=client_id,
-                 data={'source_x': source_x, 'source_y': source_y, 'dest_x': dest_x, 'dest_y': dest_y, 
-                 'type': type.value}), client_id=client_id)
+                 type=CommandType.SPAWN_PROJECTILE, time=datetime.now(), client_id=client_id,
+                 data={'id': projectile_id, 'source_x': source_x, 'source_y': source_y, 'dest_x': dest_x, 'dest_y': dest_y, 
+                 'type': type.value, 'player_id': client_id}), client_id=client_id)
