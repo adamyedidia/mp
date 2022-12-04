@@ -4,6 +4,6 @@ import socket
 SERVER = socket.gethostbyname(socket.gethostname())
 PORT = 5555
 
-TEST_LAG = 0
+TEST_LAG = 0.0
 
 from local_settings import *

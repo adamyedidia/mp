@@ -118,7 +118,7 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
             send_ack(socket, packet_id)
             rset(handled_redis_key, '1', client_id=client.id or -1)
         else:
-            print(f'Ignoring {packet[:LOG_CUTOFF]} because this packet has already been handled\n')
+            print(f'Ignoring {str(packet)[:LOG_CUTOFF]} because this packet has already been handled\n')
     return False
 
 
