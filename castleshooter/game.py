@@ -182,7 +182,7 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
     raw_snaps = get_game_state_snapshots(client_id=client_id)
     assert len(raw_snaps) > 0
     if client_id is not None:
-        raw_snap_to_run_forward_from = raw_snaps[0] if (len(raw_snaps) < 2) else raw_snaps[-2]
+        raw_snap_to_run_forward_from = raw_snaps[-1]
     else:
         raw_snap_to_run_forward_from = raw_snaps[0]
     snap_to_run_forward_from = GameState.from_json(json.loads(raw_snap_to_run_forward_from))
