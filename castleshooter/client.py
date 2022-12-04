@@ -44,6 +44,10 @@ def _handle_payload_from_server(payload: str) -> None:
         key, data = payload.split('|')
 
         if 'most_recent_game_state_snapshot' in key:
+            try:
+                json.loads(GameState.from_json(json.loads(data)))
+            except JSONDecodeError as e:
+                print(f'Ignoring unparseable snap from server: {data[:LOG_CUTOFF]}')
             game_state_snapshots.append(data)
             if len(game_state_snapshots) > MAX_GAME_STATE_SNAPSHOTS:
                 del game_state_snapshots[0]
@@ -120,7 +124,7 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
 def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
     while True:
         global stored_data
-        raw_data = socket.recv(65536).decode()
+        raw_data = socket.recv(1048576).decode()
         for datum in raw_data.split(';'):
             # Sometimes packets get split by TCP or something, 
             # so if we fail to process a packet successfully, we store it and instead try processing it concatenated
