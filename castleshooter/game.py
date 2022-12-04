@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
 import json
 from math import sqrt
+import math
 import random
 from socket import socket
 from typing import Optional
 import pygame
 from pygame import Color
+from projectile import generate_projectile_id, Projectile, ProjectileType
 from direction import determine_direction_from_keyboard, to_optional_direction
 from command import Command, CommandType, get_commands_by_player
 
@@ -16,7 +18,7 @@ from canvas import Canvas
 from client_utils import Client, client
 from direction import direction_to_unit_vector
 
-from packet import send_move_command, send_without_retry, send_turn_command
+from packet import send_move_command, send_without_retry, send_turn_command, send_shoot_command
 from json.decoder import JSONDecodeError
 
 from utils import MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF
@@ -59,6 +61,16 @@ class Game:
                                      pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
                         direction = determine_direction_from_keyboard()
                         send_turn_command(self.s, direction, client_id=client.id)
+                    elif event.key == pygame.K_SPACE:
+                        mouse_x, mouse_y = pygame.mouse.get_pos()
+                        arrow_distance = 400
+                        vector_from_player_to_mouse = (mouse_x - self.player.x, mouse_y - self.player.y)
+                        vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
+                        unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
+                                                            vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
+                        arrow_dest_x = self.player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
+                        arrow_dest_y = self.player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
+                        send_shoot_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
                     elif event.key == pygame.K_ESCAPE:
                         run = False
 
@@ -83,19 +95,22 @@ class Game:
 
 
 class GameState:
-    def __init__(self, players: list[Player], time: Optional[datetime] = None):
+    def __init__(self, players: list[Player], projectiles: list[Projectile], time: Optional[datetime] = None):
         self.players = players
+        self.projectiles = projectiles
         self.time = time if time is not None else datetime.now()
 
     def to_json(self) -> dict:
         return {
             'players': [player.to_json() for player in self.players],
+            'projectiles': [projectile.to_json() for projectile in self.projectiles],
             'time': datetime.timestamp(self.time),
         }
 
     @classmethod
     def from_json(cls, d: dict) -> 'GameState':
         return GameState(players=[Player.from_json(p) for p in d['players']], 
+                         projectiles=[Projectile.from_json(p) for p in d['projectiles']],
                          time=datetime.fromtimestamp(d['time']))
 
 
@@ -109,6 +124,46 @@ def get_game_state_snapshots(*, client_id: Optional[int] = None) -> list[str]:
         return (json.loads(raw_game_state_snapshots)
                 if (raw_game_state_snapshots := rget('game_state_snapshots', client_id=None)) is not None
                 else [json.dumps(GameState([]).to_json())])
+
+
+def _move_projectile(projectile: Optional[Projectile], *, prev_time: datetime, next_time: datetime) -> Optional[Projectile]:
+    if projectile is None:
+        return
+    time_elapsed_since_last_command = (next_time - prev_time).total_seconds()
+    distance_traveled = projectile.speed * time_elapsed_since_last_command    
+    if projectile.dest_x is not None and projectile.dest_y is not None:
+        distance_to_dest = sqrt((projectile.x - projectile.dest_x)**2 + (projectile.y - projectile.dest_y)**2)
+        to_dest_unit_vector_x = (projectile.dest_x - projectile.x) / distance_to_dest if distance_to_dest > 0 else 0
+        to_dest_unit_vector_y = (projectile.dest_y - projectile.y) / distance_to_dest if distance_to_dest > 0 else 0
+        if distance_to_dest < distance_traveled or distance_to_dest <= 0:
+            return None
+        else:
+            projectile.x += int(to_dest_unit_vector_x * distance_traveled)
+            projectile.y += int(to_dest_unit_vector_y * distance_traveled)
+        return projectile
+    return None
+
+
+def _run_events_for_projectile(starting_time: datetime, projectile: Optional[Projectile],
+                               commands_for_projectile: list, projectile_id: int, 
+                               end_time: Optional[datetime] = None) -> Optional[Projectile]:
+    if end_time is None:
+        end_time = datetime.now()
+    current_time = starting_time    
+    for command in commands_for_projectile:
+        if projectile is None and command.type != CommandType.SPAWN_PROJECTILE:
+            continue
+        if command.time < starting_time:
+            continue
+        if command.time > end_time:
+            break
+        _move_projectile(projectile, prev_time=current_time, next_time=command.time)
+        if command.type == CommandType.SPAWN_PROJECTILE:
+            assert command.data is not None
+            projectile = Projectile.from_json(command.data)
+    _move_projectile(projectile, prev_time=current_time, next_time=end_time)
+
+    return projectile
 
 
 def _move_player(player: Optional[Player], *, prev_time: datetime, next_time: datetime) -> None:
