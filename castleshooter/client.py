@@ -14,7 +14,7 @@ from packet import (
 import json
 from json.decoder import JSONDecodeError
 from game import GameState, game_state_snapshots
-from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY
+from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
 from time import sleep
 
 
@@ -88,7 +88,7 @@ def _clear_stored_data(stored_data: list[str]) -> None:
 
 # Returns whether or not it's the client_id packet at the beginning
 def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool:
-    print(f'received: {datum}')
+    print(f'received: {datum[:LOG_CUTOFF]}\n')
     packet = Packet.from_str(datum)
     packet_id = packet.id
     payload = packet.payload
@@ -113,7 +113,7 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
             send_ack(socket, packet_id)
             rset(handled_redis_key, '1', client_id=client.id or -1)
         else:
-            print(f'Ignoring {packet} because this packet has already been handled')
+            print(f'Ignoring {packet[:LOG_CUTOFF]} because this packet has already been handled\n')
     return False
 
 
@@ -137,11 +137,11 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
                             if _handle_datum(socket, ''.join(stored_data), client_id_only=client_id_only) and client_id_only:
                                 return
                         except Exception as e2:
-                            print(f'Ignoring {joint_datum} because of exception: {e2}')
+                            print(f'Ignoring {joint_datum} because of exception: {e2}\n')
                         else:
                             _clear_stored_data(stored_data)
                     else:
-                        print(f'Ignoring {datum} because of exception: {e1}')
+                        print(f'Ignoring {datum} because of exception: {e1}\n')
                 else:
                     _clear_stored_data(stored_data)
 
