@@ -226,9 +226,9 @@ def infer_and_store_game_state_snap() -> None:
     game_state_snapshots: list[str] = get_game_state_snapshots()
     new_snapshot = infer_game_state(client_id=None, end_time=datetime.now() - timedelta(seconds=3))
     game_state_snapshots.append(json.dumps(new_snapshot.to_json()))
-    if num_snaps_inferred % 8 == 0:
-        print(f'Culling snapshots: {len(game_state_snapshots)}')
-        game_state_snapshots = [s for s in game_state_snapshots if datetime.now() - datetime.fromtimestamp(json.loads(s)['time']) < timedelta(seconds=7)]
-        print(f'Culling snapshots: {len(game_state_snapshots)}')        
+    # if num_snaps_inferred % 8 == 0:
+    #     print(f'Culling snapshots: {len(game_state_snapshots)}')
+    #     game_state_snapshots = [s for s in game_state_snapshots if datetime.now() - datetime.fromtimestamp(json.loads(s)['time']) < timedelta(seconds=7)]
+    #     print(f'Culling snapshots: {len(game_state_snapshots)}')        
     rset('game_state_snapshots', json.dumps(game_state_snapshots), client_id=None)
     rset('most_recent_game_state_snapshot', json.dumps(new_snapshot.to_json()), client_id=None)
