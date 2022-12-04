@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 import gevent
+from projectile import ProjectileType
 from settings import TEST_LAG
 from direction import Direction
 from command import Command, CommandType, store_command
@@ -145,3 +146,11 @@ def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: i
                  type=CommandType.TURN, time=datetime.now(), client_id=client_id, 
                  data={'dir': direction.value if direction else None}),
                  client_id=client_id)
+
+
+def send_shoot_command(conn: Any, projectile_id: int, source_x: int, source_y: int, dest_x: int, dest_y: int, type: ProjectileType,
+                       *, client_id: int) -> None:
+    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                 type=CommandType.SHOOT, time=datetime.now(), client_id=client_id,
+                 data={'source_x': source_x, 'source_y': source_y, 'dest_x': dest_x, 'dest_y': dest_y, 
+                 'type': type.value}), client_id=client_id)
