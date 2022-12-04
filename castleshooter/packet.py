@@ -9,6 +9,7 @@ from redis_utils import redis_lock, rget, rset, rlisten
 from utils import to_optional_int
 from time import sleep
 import json
+from _thread import start_new_thread
 
 
 class Packet:
@@ -96,9 +97,15 @@ def send_with_retry(conn: Any, message: str, client_id: Optional[int]) -> bool:
     return False
 
 
+def send_with_test_lag(conn: Any, message: str, lag: float, *, client_id: Optional[int]) -> None:
+    sleep(lag)
+    packet = Packet(client_id=client_id, payload=message)
+    print(f'Sending without retry {packet}')    
+    conn.sendall(bytes(packet.to_str(), 'utf-8'))
+
 def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> None:
-    if TEST_LAG > 0:
-        sleep(TEST_LAG)
+    if TEST_LAG:
+        start_new_thread(send_with_test_lag, (conn, message, TEST_LAG), {'client_id': client_id})
     packet = Packet(client_id=client_id, payload=message)
     print(f'Sending without retry {packet}')    
     conn.sendall(bytes(packet.to_str(), 'utf-8'))
