@@ -148,9 +148,22 @@ def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: i
                  client_id=client_id)
 
 
-def send_spawn_projectile_command(conn: Any, projectile_id: int, source_x: int, source_y: int, dest_x: int, dest_y: int, type: ProjectileType,
-                       *, client_id: int) -> None:
+def send_spawn_projectile_command(conn: Any, projectile_id: int, source_x: int, source_y: int, dest_x: int, dest_y: int, 
+                                  friends: list[int], type: ProjectileType, *, client_id: int) -> None:
     send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
                  type=CommandType.SPAWN_PROJECTILE, time=datetime.now(), client_id=client_id,
                  data={'id': projectile_id, 'source_x': source_x, 'source_y': source_y, 'dest_x': dest_x, 'dest_y': dest_y, 
-                 'type': type.value, 'player_id': client_id}), client_id=client_id)
+                 'type': type.value, 'player_id': client_id, 'friends': friends}), client_id=client_id)
+
+
+def send_eat_arrow_command(conn: Any, arrow_start_x: int, arrow_start_y: int, arrow_end_x: int, arrow_end_y: int, *, client_id: int) -> None:
+    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                 type=CommandType.EAT_ARROW, time=datetime.now(), client_id=client_id,
+                 data={'arrow_start_x': arrow_start_x, 'arrow_start_y': arrow_start_y, 'arrow_end_x': arrow_end_x, 
+                 'arrow_end_y': arrow_end_y, 'player_id': client_id}), client_id=client_id)
+
+
+def send_remove_projectile_command(conn: Any, projectile_id: int, *, client_id: int) -> None:
+    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                 type=CommandType.REMOVE_PROJECTILE, time=datetime.now(), client_id=client_id,
+                 data={'projectile_id': projectile_id}), client_id=client_id)
