@@ -17,7 +17,8 @@ import game
 
 _SUBSCRIPTION_KEYS = ['active_players', 
                       'most_recent_game_state_snapshot',
-                      'commands_by_player']
+                      'commands_by_player',
+                      'commands_by_projectile']
 
 
 class Connection:

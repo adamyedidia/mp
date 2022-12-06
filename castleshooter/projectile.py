@@ -28,7 +28,8 @@ ARROW_COLOR = (0,0,0)
 
 class Projectile:
     def __init__(self, id: int, startx: int, starty: int, type: ProjectileType,
-                 player_id: int, dest_x: int, dest_y: int, source_x: int, source_y: int):
+                 player_id: int, dest_x: int, dest_y: int, source_x: int, source_y: int,
+                 friends: Optional[list[int]] = None):
         self.id = id
         self.player_id = player_id
         self.x = startx
@@ -41,12 +42,15 @@ class Projectile:
         self.speed: int = 300
         self.type: ProjectileType = type
 
+        # client_ids of friendly players
+        self.friends = friends if friends is not None else []
+
 
     def draw(self, g: pygame.surface.Surface):
         if self.type == ProjectileType.ARROW:
             color = ARROW_COLOR
             arrow_length = ARROW_LENGTH
-            end = ARROW_COLOR
+            end = (self.x, self.y)
             vector_from_source_to_dest = (self.dest_x - self.source_x, self.dest_y - self.source_y)
             vector_from_source_to_dest_mag = math.sqrt(vector_from_source_to_dest[0] ** 2 + vector_from_source_to_dest[1] ** 2)
             unit_vector_from_source_to_dest = (vector_from_source_to_dest[0] / vector_from_source_to_dest_mag,
@@ -56,13 +60,14 @@ class Projectile:
             draw_arrow(g, color, start, end)
 
     def get_start_of_arrow(self) -> list[int]:
+        end = (self.x, self.y)
         arrow_length = ARROW_LENGTH
         vector_from_source_to_dest = (self.dest_x - self.source_x, self.dest_y - self.source_y)
         vector_from_source_to_dest_mag = math.sqrt(vector_from_source_to_dest[0] ** 2 + vector_from_source_to_dest[1] ** 2)
         unit_vector_from_source_to_dest = (vector_from_source_to_dest[0] / vector_from_source_to_dest_mag,
                                             vector_from_source_to_dest[1] / vector_from_source_to_dest_mag)
-        start = (end[0] - unit_vector_from_source_to_dest[0] * arrow_length, 
-                    end[1] - unit_vector_from_source_to_dest[1] * arrow_length)
+        return [int(end[0] - unit_vector_from_source_to_dest[0] * arrow_length), 
+                int(end[1] - unit_vector_from_source_to_dest[1] * arrow_length)]
 
     def to_json(self):
         return json.dumps({
@@ -75,6 +80,7 @@ class Projectile:
             'source_x': self.source_x,
             'source_y': self.source_y,
             'type': self.type.value,
+            'friends': self.friends,
             # 'item': self.item.to_json(),
         })
 
@@ -85,7 +91,8 @@ class Projectile:
         return Projectile(id=d['id'], startx=d['source_x'], starty=d['source_y'], type=ProjectileType(d['type']),
                           player_id=d['player_id'],
                           dest_x=int(d['dest_x']), dest_y=int(d['dest_y']),
-                          source_x = int(d['source_x']), source_y=int(d['source_y']))
+                          source_x = int(d['source_x']), source_y=int(d['source_y']),
+                          friends=d['friends'])
 
     def copy(self) -> 'Projectile':
         return Projectile.from_json(self.to_json())            

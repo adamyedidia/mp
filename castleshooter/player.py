@@ -36,9 +36,9 @@ class Player():
     def draw(self, g: pygame.surface.Surface):
         pygame.draw.rect(g, self.color, (int(math.ceil(self.x - self.width / 2)), int(math.ceil(self.y - self.height / 2)), self.width, self.height), 0)
         for arrow in self.arrows_puncturing:
-            draw_arrow(g, ARROW_COLOR, arrow[0], arrow[1])
-        self.healthbar.draw(g, self.x, self.y)
-        self.item.draw(g, self.x, self.y)
+            draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x, arrow[0][1] + self.y), (arrow[1][0] + self.x, arrow[1][1] + self.y))
+        # self.healthbar.draw(g, self.x, self.y)
+        # self.item.draw(g, self.x, self.y)
 
     def make_valid_position(self, w: int, h: int) -> None:
         self.x = max(0, self.x)
