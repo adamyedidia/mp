@@ -4,7 +4,7 @@ from math import sqrt
 import math
 import random
 from socket import socket
-from typing import Optional
+from typing import Any, Optional
 import pygame
 from pygame import Color
 from command import get_commands_by_projectile
@@ -16,7 +16,7 @@ from command import Command, CommandType, get_commands_by_player
 
 from redis_utils import redis_lock, rget, rset
 
-from player import Player
+from player import Player, BASE_MAX_HP
 from canvas import Canvas
 from client_utils import Client, client
 from direction import direction_to_unit_vector
@@ -34,7 +34,7 @@ class Game:
         self.s = socket
         self.player_number = self.client.id if self.client.id is not None else -1
         self.players: dict[int, Player] = {}
-        self.player: Optional[Player] = Player(client.id, 50, 50)
+        self.player: Optional[Player] = Player(client.id, 300, 300)
         self.canvas = Canvas(self.width, self.height, "Testing...")
 
     def run(self):
@@ -102,7 +102,7 @@ class Game:
                                                 projectile.y - self.player.y,
                                                 client_id=client.id)
                             send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
-                            self.player.hp -= 1
+                            self.player.hp += 1
                 
                 if self.player.hp == 0:
                     send_die_command(self.s, client_id=client.id)
@@ -111,7 +111,7 @@ class Game:
             else:
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                        send_spawn_command(self.s, 50, 50, client_id=client.id)
+                        send_spawn_command(self.s, 300, 300, client_id=client.id)
 
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
@@ -127,9 +127,25 @@ class Game:
                 player.draw(canvas)
             for projectile in game_state.projectiles:
                 projectile.draw(canvas)
+            self.draw_health_state(canvas)
             self.canvas.update()
 
         pygame.quit()
+
+    def draw_health_state(self, canvas: Any) -> None:
+        if self.player is None:
+            return
+        current_x = 25
+        current_y = 25
+        for i in range(max(BASE_MAX_HP, self.player.hp)):
+            if i >= self.player.hp:
+                image_surface = pygame.image.load('assets/empty_heart.png').convert_alpha()
+            elif i >= BASE_MAX_HP:
+                image_surface = pygame.image.load('assets/blue_heart.png').convert_alpha()
+            else:
+                image_surface = pygame.image.load('assets/heart.png').convert_alpha()
+            canvas.blit(image_surface, (current_x, current_y))
+            current_x += 75
 
 
 class GameState:
