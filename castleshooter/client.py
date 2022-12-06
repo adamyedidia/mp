@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from command import Command, get_commands_by_player, commands_by_player
+from command import Command, get_commands_by_player, commands_by_player, get_commands_by_projectile, commands_by_projectile
 import game
 from settings import PORT, SERVER
 import socket
@@ -81,6 +81,36 @@ def _handle_payload_from_server(payload: str) -> None:
                 commands_for_player = [c for c in commands_for_player 
                                        if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
                 commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]                                             
+
+        if 'commands_by_projectile' in key:
+            raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id)
+            raw_commands_by_projectile_from_server = {int(key): val for key, val in json.loads(data).items()}
+            projectile_ids_handled: set[int] = set()
+            global commands_by_projectile
+            for projectile_id, raw_commands in raw_commands_by_projectile.items():
+                projectile_ids_handled.add(projectile_id)
+                commands_for_projectile = sorted([Command.from_json(json.loads(c)) for c in raw_commands], 
+                                             key=lambda c: c.time)
+                commands_for_projectile = [c for c in commands_for_projectile 
+                                       if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
+                raw_commands_from_server = raw_commands_by_projectile_from_server.get(projectile_id) or []
+                commands_for_projectile_from_server = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], key=lambda c: c.time)
+                commands_for_projectile_from_server = [c for c in commands_for_projectile_from_server 
+                                                  if (c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)
+                                                      and c.id not in [ci.id for ci in commands_for_projectile])]
+                commands_for_projectile.extend(commands_for_projectile_from_server)
+                commands_by_projectile[projectile_id] = [json.dumps(c.to_json()) for c in commands_for_projectile]
+
+            for projectile_id, raw_commands_from_server in raw_commands_by_projectile_from_server.items():
+                if projectile_id in projectile_ids_handled:
+                    continue
+                projectile_ids_handled.add(projectile_id)
+                commands_for_projectile = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], 
+                                             key=lambda c: c.time)                
+                commands_for_projectile = [c for c in commands_for_projectile 
+                                       if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
+                commands_by_projectile[projectile_id] = [json.dumps(c.to_json()) for c in commands_for_projectile]    
+
 
 
 stored_data: list[str] = []
