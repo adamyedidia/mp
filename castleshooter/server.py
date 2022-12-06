@@ -17,7 +17,8 @@ import game
 
 _SUBSCRIPTION_KEYS = ['active_players', 
                       'most_recent_game_state_snapshot',
-                      'commands_by_player']
+                      'commands_by_player',
+                      'commands_by_projectile']
 
 
 class Connection:
@@ -127,7 +128,7 @@ def _handle_outgoing_active_players_connection(connection: Connection) -> None:
     rlisten(_SUBSCRIPTION_KEYS, _handle_change)
 
 
-def _handle_server_state() -> None:
+def _create_game_state_snaps() -> None:
     while True:
         game.infer_and_store_game_state_snap()
 
@@ -153,7 +154,7 @@ def main() -> None:
     game_state = GameState()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    start_new_thread(_handle_server_state, tuple([]))
+    start_new_thread(_create_game_state_snaps, tuple([]))
     try:
         s.bind((socket.gethostbyname(socket.gethostname()), PORT))
         s.listen()

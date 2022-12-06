@@ -7,6 +7,9 @@ from socket import socket
 from typing import Optional
 import pygame
 from pygame import Color
+from command import get_commands_by_projectile
+from packet import send_eat_arrow_command, send_remove_projectile_command
+from projectile import projectile_intersects_player
 from projectile import generate_projectile_id, Projectile, ProjectileType
 from direction import determine_direction_from_keyboard, to_optional_direction
 from command import Command, CommandType, get_commands_by_player
@@ -49,10 +52,9 @@ class Game:
                 continue
 
             game_state = infer_game_state(client_id=client.id)
-            self.player = None
             for player in game_state.players:
                 if player.client_id == client.id:
-                    self.player = player
+                    self.player.update_info_from_inferred_game_state(player)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -78,11 +80,24 @@ class Game:
                                                                 vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
                             arrow_dest_x = self.player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
                             arrow_dest_y = self.player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
-                            send_spawn_projectile_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, 
-                                                        type=ProjectileType.ARROW, client_id=client.id)
+                            send_spawn_projectile_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, [client.id],
+                                                          type=ProjectileType.ARROW, client_id=client.id)
                             # send_shoot_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
+
                     elif event.key == pygame.K_ESCAPE:
                         run = False
+
+            for projectile in game_state.projectiles:
+                if projectile_intersects_player(projectile, self.player) and not client.id in projectile.friends:
+                    if projectile.type == ProjectileType.ARROW:
+                        start_of_arrow_x, start_of_arrow_y = projectile.get_start_of_arrow()
+                        send_eat_arrow_command(self.s,
+                                               start_of_arrow_x - self.player.x,
+                                               start_of_arrow_y - self.player.y,
+                                               projectile.x - self.player.x,
+                                               projectile.y - self.player.y,
+                                               client_id=client.id)
+                        send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
@@ -100,11 +115,6 @@ class Game:
             self.canvas.update()
 
         pygame.quit()
-
-    def send_data(self) -> None:
-        data = f'player_state_{self.player_number}|{self.player.to_json()}'
-        print(f'Sending: {data[:LOG_CUTOFF]}\n')
-        send_without_retry(self.s, data, client_id=client.id)
 
 
 class GameState:
@@ -174,6 +184,8 @@ def _run_commands_for_projectile(starting_time: datetime, projectile: Optional[P
         if command.type == CommandType.SPAWN_PROJECTILE:
             assert command.data is not None
             projectile = Projectile.from_json(command.data)
+        elif command.type == CommandType.REMOVE_PROJECTILE:
+            return None
     projectile = _move_projectile(projectile, prev_time=current_time, next_time=end_time)
 
     return projectile
@@ -208,6 +220,7 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
     if end_time is None:
         end_time = datetime.now()
     current_time = starting_time
+    raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id)    
     for command in commands_for_player:
         if player is None and command.type != CommandType.SPAWN:
             continue
@@ -234,9 +247,18 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             assert command.data is not None
             projectile: Optional[Projectile] = Projectile.from_json(command.data)
             assert projectile
-            projectile = _run_commands_for_projectile(command.time, projectile, [], projectile.id, end_time)
+            projectile_id = projectile.id            
+            raw_commands_for_projectile = raw_commands_by_projectile.get(projectile_id) or []
+            commands_for_projectile = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_projectile], 
+                                        key=lambda c: c.time)            
+            projectile = _run_commands_for_projectile(command.time, projectile, commands_for_projectile, projectile.id, end_time)
             if projectile and projectile.id not in [p.id for p in all_projectiles]:
                 all_projectiles.append(projectile)
+        elif command.type == CommandType.EAT_ARROW:
+            assert command.data is not None
+            assert player is not None
+            player.arrows_puncturing.append([[command.data['arrow_start_x'], command.data['arrow_start_y']],
+                                             [command.data['arrow_end_x'], command.data['arrow_end_y']]])
         current_time = command.time
     _move_player(player, prev_time=current_time, next_time=end_time)
 
@@ -263,16 +285,20 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
         raw_snap_to_run_forward_from = raw_snaps[0]
     snap_to_run_forward_from = GameState.from_json(json.loads(raw_snap_to_run_forward_from))
     raw_commands_by_player = get_commands_by_player(client_id=client_id)
+    raw_commands_by_projectile = get_commands_by_projectile(client_id=client_id)
     player_ids_commands_have_been_run_for: set[int] = set()
     final_players: list[Player] = []
     player: Optional[Player] = None
     player_client_id = None
-    all_projectiles = []
+    all_projectiles: list[Projectile] = []
     for projectile in snap_to_run_forward_from.projectiles:
         assert projectile is not None
         projectile_id = projectile.id
-        new_projectile = _run_commands_for_projectile(snap_to_run_forward_from.time, projectile.copy(), [], projectile_id, 
-                                                  end_time=end_time)
+        raw_commands_for_projectile = raw_commands_by_projectile.get(projectile_id) or []
+        commands_for_projectile = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_projectile], 
+                                     key=lambda c: c.time)
+        new_projectile = _run_commands_for_projectile(snap_to_run_forward_from.time, projectile.copy(), commands_for_projectile, 
+                                                  projectile_id, end_time=end_time)
         if new_projectile and new_projectile.id not in [p.id for p in all_projectiles]:
             all_projectiles.append(new_projectile)                                                  
 

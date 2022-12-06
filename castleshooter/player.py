@@ -1,7 +1,10 @@
+import math
 from typing import Optional
 import pygame
 from pygame import Color
 import json
+from projectile import draw_arrow
+from projectile import ARROW_COLOR
 from direction import Direction, to_optional_direction
 from item import Item, Sword
 from json.decoder import JSONDecodeError
@@ -12,7 +15,8 @@ class Player():
     def __init__(self, client_id: int, startx: int, starty: int, direction: Optional[Direction] = None,
                  dest_x: Optional[int] = None, dest_y: Optional[int] = None,
                  color: Color=Color(255, 0, 0), 
-                 healthbar: Optional['HealthBar'] = None):
+                 healthbar: Optional['HealthBar'] = None,
+                 arrows_puncturing: Optional[list[list[list[int]]]] = None):
         self.client_id = client_id
         self.x = startx
         self.y = starty
@@ -27,11 +31,14 @@ class Player():
 
         self.speed: int = 200
         self.color = color
+        self.arrows_puncturing = arrows_puncturing if arrows_puncturing is not None else []
 
     def draw(self, g: pygame.surface.Surface):
-        pygame.draw.rect(g, self.color ,(self.x, self.y, self.width, self.height), 0)
-        self.healthbar.draw(g, self.x, self.y)
-        self.item.draw(g, self.x, self.y)
+        pygame.draw.rect(g, self.color, (int(math.ceil(self.x - self.width / 2)), int(math.ceil(self.y - self.height / 2)), self.width, self.height), 0)
+        for arrow in self.arrows_puncturing:
+            draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x, arrow[0][1] + self.y), (arrow[1][0] + self.x, arrow[1][1] + self.y))
+        # self.healthbar.draw(g, self.x, self.y)
+        # self.item.draw(g, self.x, self.y)
 
     def make_valid_position(self, w: int, h: int) -> None:
         self.x = max(0, self.x)
@@ -48,6 +55,7 @@ class Player():
             'dest_y': self.dest_y,
             'healthbar': self.healthbar.to_json(),
             'direction': self.direction.value if self.direction is not None else None,
+            'arrows_puncturing': self.arrows_puncturing,
             # 'item': self.item.to_json(),
         })
 
@@ -58,7 +66,8 @@ class Player():
         return Player(client_id=d['client_id'], startx=d['x'], starty=d['y'], 
                       dest_x=to_optional_int(d['dest_x']), dest_y=to_optional_int(d['dest_y']),
                       healthbar=HealthBar.from_json(d['healthbar']), 
-                      direction=to_optional_direction(d['direction']))
+                      direction=to_optional_direction(d['direction']),
+                      arrows_puncturing=d['arrows_puncturing'])
 
     def copy(self) -> 'Player':
         return Player.from_json(self.to_json())
@@ -72,6 +81,14 @@ class Player():
         self.direction = to_optional_direction(d['direction'])
         self.healthbar.update_from_json(d['healthbar'])
         # self.item.from_json(d['item'])  # TODO: fix this
+
+    def update_info_from_inferred_game_state(self, player: 'Player') -> None:
+        self.x = player.x
+        self.y = player.y
+        self.dest_x = player.dest_x
+        self.dest_y = player.dest_y
+        self.direction = player.direction
+        self.speed = player.speed
 
 
 class HealthBar():
