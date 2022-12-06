@@ -102,7 +102,7 @@ class Game:
                                                 projectile.y - self.player.y,
                                                 client_id=client.id)
                             send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
-                            self.player.hp += 1
+                            self.player.hp -= 1
                 
                 if self.player.hp == 0:
                     send_die_command(self.s, client_id=client.id)
