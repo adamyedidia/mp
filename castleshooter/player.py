@@ -11,11 +11,14 @@ from json.decoder import JSONDecodeError
 
 from utils import to_optional_int
 
+BASE_MAX_HP = 4
+
 class Player():
     def __init__(self, client_id: int, startx: int, starty: int, direction: Optional[Direction] = None,
                  dest_x: Optional[int] = None, dest_y: Optional[int] = None,
                  color: Color=Color(255, 0, 0), 
                  healthbar: Optional['HealthBar'] = None,
+                 hp: int = BASE_MAX_HP,
                  arrows_puncturing: Optional[list[list[list[int]]]] = None):
         self.client_id = client_id
         self.x = startx
@@ -28,6 +31,7 @@ class Player():
 
         self.healthbar: HealthBar = healthbar if healthbar is not None else HealthBar()
         self.item: Item = Sword()
+        self.hp = hp
 
         self.speed: int = 200
         self.color = color

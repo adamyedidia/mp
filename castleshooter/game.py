@@ -8,7 +8,7 @@ from typing import Optional
 import pygame
 from pygame import Color
 from command import get_commands_by_projectile
-from packet import send_eat_arrow_command, send_remove_projectile_command
+from packet import send_eat_arrow_command, send_remove_projectile_command, send_die_command, send_spawn_command
 from projectile import projectile_intersects_player
 from projectile import generate_projectile_id, Projectile, ProjectileType
 from direction import determine_direction_from_keyboard, to_optional_direction
@@ -54,50 +54,65 @@ class Game:
             game_state = infer_game_state(client_id=client.id)
             for player in game_state.players:
                 if player.client_id == client.id:
-                    self.player.update_info_from_inferred_game_state(player)
+                    if self.player is not None:
+                        self.player.update_info_from_inferred_game_state(player)
+                    else:
+                        self.player = player
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    run = False
-
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    assert client.id is not None
-                    send_move_command(self.s, x_pos=event.pos[0], y_pos=event.pos[1], client_id=client.id)
-
-                if event.type in [pygame.KEYUP, pygame.KEYDOWN]:
-                    if event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_RIGHT, pygame.K_RIGHT, 
-                                     pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
-                        direction = determine_direction_from_keyboard()
-                        send_turn_command(self.s, direction, client_id=client.id)
-                    elif event.key == pygame.K_SPACE:
-                        pressed = pygame.key.get_pressed()
-                        if pressed[pygame.K_SPACE]:
-                            mouse_x, mouse_y = pygame.mouse.get_pos()
-                            arrow_distance = 400
-                            vector_from_player_to_mouse = (mouse_x - self.player.x, mouse_y - self.player.y)
-                            vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
-                            unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
-                                                                vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
-                            arrow_dest_x = self.player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
-                            arrow_dest_y = self.player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
-                            send_spawn_projectile_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, [client.id],
-                                                          type=ProjectileType.ARROW, client_id=client.id)
-                            # send_shoot_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
-
-                    elif event.key == pygame.K_ESCAPE:
+            if self.player is not None:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
                         run = False
 
-            for projectile in game_state.projectiles:
-                if projectile_intersects_player(projectile, self.player) and not client.id in projectile.friends:
-                    if projectile.type == ProjectileType.ARROW:
-                        start_of_arrow_x, start_of_arrow_y = projectile.get_start_of_arrow()
-                        send_eat_arrow_command(self.s,
-                                               start_of_arrow_x - self.player.x,
-                                               start_of_arrow_y - self.player.y,
-                                               projectile.x - self.player.x,
-                                               projectile.y - self.player.y,
-                                               client_id=client.id)
-                        send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        assert client.id is not None
+                        send_move_command(self.s, x_pos=event.pos[0], y_pos=event.pos[1], client_id=client.id)
+
+                    if event.type in [pygame.KEYUP, pygame.KEYDOWN]:
+                        if event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_RIGHT, pygame.K_RIGHT, 
+                                        pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
+                            direction = determine_direction_from_keyboard()
+                            send_turn_command(self.s, direction, client_id=client.id)
+                        elif event.key == pygame.K_SPACE:
+                            pressed = pygame.key.get_pressed()
+                            if pressed[pygame.K_SPACE]:
+                                mouse_x, mouse_y = pygame.mouse.get_pos()
+                                arrow_distance = 400
+                                vector_from_player_to_mouse = (mouse_x - self.player.x, mouse_y - self.player.y)
+                                vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
+                                unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
+                                                                    vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
+                                arrow_dest_x = self.player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
+                                arrow_dest_y = self.player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
+                                send_spawn_projectile_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, [client.id],
+                                                            type=ProjectileType.ARROW, client_id=client.id)
+                                # send_shoot_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
+
+                        elif event.key == pygame.K_ESCAPE:
+                            run = False
+
+                for projectile in game_state.projectiles:
+                    if projectile_intersects_player(projectile, self.player) and not client.id in projectile.friends:
+                        if projectile.type == ProjectileType.ARROW:
+                            start_of_arrow_x, start_of_arrow_y = projectile.get_start_of_arrow()
+                            send_eat_arrow_command(self.s,
+                                                start_of_arrow_x - self.player.x,
+                                                start_of_arrow_y - self.player.y,
+                                                projectile.x - self.player.x,
+                                                projectile.y - self.player.y,
+                                                client_id=client.id)
+                            send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
+                            self.player.hp -= 1
+                
+                if self.player.hp == 0:
+                    send_die_command(self.s, client_id=client.id)
+                    self.player = None
+
+            else:
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                        send_spawn_command(self.s, 50, 50, client_id=client.id)
+
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
@@ -259,6 +274,8 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             assert player is not None
             player.arrows_puncturing.append([[command.data['arrow_start_x'], command.data['arrow_start_y']],
                                              [command.data['arrow_end_x'], command.data['arrow_end_y']]])
+        elif command.type == CommandType.DIE:
+            player = None
         current_time = command.time
     _move_player(player, prev_time=current_time, next_time=end_time)
 

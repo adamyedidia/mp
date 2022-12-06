@@ -24,7 +24,7 @@ def start_up_game(socket: Any) -> None:
     sleep(0.5)
     print('Sending the spawn command!')
     send_spawn_command(socket, 50, 50, client_id=client.id)    
-    g = game.Game(500,500, client, socket)
+    g = game.Game(750,750, client, socket)
     g.run()    
 
 
