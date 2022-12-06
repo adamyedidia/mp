@@ -167,3 +167,8 @@ def send_remove_projectile_command(conn: Any, projectile_id: int, *, client_id: 
     send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
                  type=CommandType.REMOVE_PROJECTILE, time=datetime.now(), client_id=client_id,
                  data={'projectile_id': projectile_id}), client_id=client_id)
+
+
+def send_die_command(conn: Any, *, client_id: int) -> None:
+    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                 type=CommandType.DIE, time=datetime.now(), client_id=client_id), client_id=client_id)
