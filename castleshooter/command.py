@@ -18,6 +18,8 @@ class CommandType(Enum):
     SPAWN_PROJECTILE = 'spawn_projectile'
     TURN = 'turn'
     SHOOT = 'shoot'
+    EAT_ARROW = 'eat_arrow'
+    DIE = 'die'
 
 
 class Command():

@@ -2,12 +2,14 @@ from enum import Enum
 import json
 import math
 import random
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 import pygame
 from direction import to_optional_direction
 from utils import to_optional_int
 
 from direction import Direction
+if TYPE_CHECKING:
+    from player import Player
 
 def draw_arrow(screen, colour, start, end):
     # https://stackoverflow.com/questions/43527894/drawing-arrowheads-which-follow-the-direction-of-the-line-in-pygame
@@ -18,6 +20,10 @@ def draw_arrow(screen, colour, start, end):
 
 class ProjectileType(Enum):
     ARROW = 'arrow'
+
+
+ARROW_LENGTH = 30
+ARROW_COLOR = (0,0,0)
 
 
 class Projectile:
@@ -38,9 +44,9 @@ class Projectile:
 
     def draw(self, g: pygame.surface.Surface):
         if self.type == ProjectileType.ARROW:
-            color = (0,0,0)
-            arrow_length = 30
-            end = (self.x, self.y)
+            color = ARROW_COLOR
+            arrow_length = ARROW_LENGTH
+            end = ARROW_COLOR
             vector_from_source_to_dest = (self.dest_x - self.source_x, self.dest_y - self.source_y)
             vector_from_source_to_dest_mag = math.sqrt(vector_from_source_to_dest[0] ** 2 + vector_from_source_to_dest[1] ** 2)
             unit_vector_from_source_to_dest = (vector_from_source_to_dest[0] / vector_from_source_to_dest_mag,
@@ -48,6 +54,15 @@ class Projectile:
             start = (end[0] - unit_vector_from_source_to_dest[0] * arrow_length, 
                      end[1] - unit_vector_from_source_to_dest[1] * arrow_length)
             draw_arrow(g, color, start, end)
+
+    def get_start_of_arrow(self) -> list[int]:
+        arrow_length = ARROW_LENGTH
+        vector_from_source_to_dest = (self.dest_x - self.source_x, self.dest_y - self.source_y)
+        vector_from_source_to_dest_mag = math.sqrt(vector_from_source_to_dest[0] ** 2 + vector_from_source_to_dest[1] ** 2)
+        unit_vector_from_source_to_dest = (vector_from_source_to_dest[0] / vector_from_source_to_dest_mag,
+                                            vector_from_source_to_dest[1] / vector_from_source_to_dest_mag)
+        start = (end[0] - unit_vector_from_source_to_dest[0] * arrow_length, 
+                    end[1] - unit_vector_from_source_to_dest[1] * arrow_length)
 
     def to_json(self):
         return json.dumps({
@@ -78,3 +93,12 @@ class Projectile:
 
 def generate_projectile_id():
     return random.randint(0, 10_000_000)
+
+
+def projectile_intersects_player(projectile: Projectile, player: 'Player') -> bool:
+    if (projectile.x > player.x - player.width/2 + 1
+            and projectile.x < player.x + player.width/2 - 1
+            and projectile.y > player.y - player.height/2 + 1
+            and projectile.y < player.y + player.height/2 - 1):
+        return True
+    return False

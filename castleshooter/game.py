@@ -7,6 +7,8 @@ from socket import socket
 from typing import Optional
 import pygame
 from pygame import Color
+from packet import send_eat_arrow_command
+from projectile import projectile_intersects_player
 from projectile import generate_projectile_id, Projectile, ProjectileType
 from direction import determine_direction_from_keyboard, to_optional_direction
 from command import Command, CommandType, get_commands_by_player
@@ -49,10 +51,9 @@ class Game:
                 continue
 
             game_state = infer_game_state(client_id=client.id)
-            self.player = None
             for player in game_state.players:
                 if player.client_id == client.id:
-                    self.player = player
+                    self.player.update_info_from_inferred_game_state(player)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -81,8 +82,13 @@ class Game:
                             send_spawn_projectile_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, 
                                                         type=ProjectileType.ARROW, client_id=client.id)
                             # send_shoot_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
+
                     elif event.key == pygame.K_ESCAPE:
                         run = False
+
+            for projectile in game_state.projectiles:
+                if projectile_intersects_player(projectile, self.player):
+                    send_eat_arrow_command(projectile.x - self.player.x)
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
