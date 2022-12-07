@@ -28,6 +28,16 @@ from json.decoder import JSONDecodeError
 
 from utils import MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF
 
+
+def draw_text_centered_on_rectangle(g: pygame.surface.Surface, message: str, x: int, y: int, width: int, height: int, font_size: int) -> None:
+    font = pygame.font.SysFont('comicsans', font_size)
+    text = font.render(message, True, (0,0,0))
+    text_rect = text.get_rect()
+    rectangle_center = (x + width/2, y + height/2)
+    g.blit(text, (int(rectangle_center[0] - text_rect.width/2), int(rectangle_center[1] - text_rect.height/2)))
+    # pygame.draw.rect(g, self.color, (int(math.ceil(self.x - self.width / 2)), int(math.ceil(self.y - self.height / 2)), self.width, self.height), 0)
+
+
 class Game:
     def __init__(self, w: int, h: int, client: Client, socket: socket):
         self.width = w
@@ -165,7 +175,6 @@ class Game:
         self.announcements.append(annoucement)
         self.announcements = self.announcements[-5:]        
 
-
     def draw_announcements(self, canvas: Any) -> None:
         current_x = 25
         current_y = self.height - 150
@@ -189,9 +198,10 @@ class Game:
 
     def draw_big_text(self, canvas: Any) -> None:
         if self.player is None:
-            font = pygame.font.SysFont("comicsans", 35)
-            text = font.render('You died. Press enter to respawn.', True, (0, 0, 0))
-            canvas.blit(text, (120, 350))
+            draw_text_centered_on_rectangle(canvas, 'You died. Press enter to respawn.', 0, 0, self.width, self.height, 35)
+            # font = pygame.font.SysFont("comicsans", 35)
+            # text = font.render('You died. Press enter to respawn.', True, (0, 0, 0))
+            # canvas.blit(text, (120, 350))
 
 
 class GameState:

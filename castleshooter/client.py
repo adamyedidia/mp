@@ -221,6 +221,7 @@ def client_main() -> None:
 
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.connect((SERVER, PORT))
         print('connected to server!')
 

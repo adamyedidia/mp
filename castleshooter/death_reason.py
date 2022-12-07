@@ -6,8 +6,8 @@ class DeathReason(Enum):
     ARROW = 'arrow'
 
 
-generic_kill_verbs = ['assassinated', 'murdered', 'eliminated', 'killed']
-arrow_kill_verbs = ['shot', 'sniped', 'feathered', 'skewered', 'pierced', 'perforated']
+generic_kill_verbs = ['assassinated', 'murdered', 'eliminated', 'killed', 'defeated']
+arrow_kill_verbs = ['shot', 'sniped', 'feathered', 'skewered', 'pierced', 'perforated', 'punctured', 'deflated']
 
 
 def death_reason_to_verb(death_reason: DeathReason) -> str:

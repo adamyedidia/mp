@@ -157,6 +157,7 @@ def main() -> None:
     start_new_thread(_create_game_state_snaps, tuple([]))
     try:
         s.bind((socket.gethostbyname(socket.gethostname()), PORT))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.listen()
         print('Starting the server!')
         while True:
