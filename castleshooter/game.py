@@ -7,6 +7,8 @@ from socket import socket
 from typing import Any, Optional
 import pygame
 from pygame import Color
+from announcement import Announcement, get_announcement_idempotency_key_for_command
+from death_reason import DeathReason, death_reason_to_verb
 from command import get_commands_by_projectile
 from packet import send_eat_arrow_command, send_remove_projectile_command, send_die_command, send_spawn_command
 from projectile import projectile_intersects_player
@@ -36,6 +38,7 @@ class Game:
         self.players: dict[int, Player] = {}
         self.player: Optional[Player] = Player(client.id, 300, 300)
         self.canvas = Canvas(self.width, self.height, "Testing...")
+        self.announcements: list[Announcement] = []
 
     def run(self):
         print('Running the game!')
@@ -59,7 +62,8 @@ class Game:
                     else:
                         self.player = player
 
-            if self.player is not None:
+            client_player = self.player
+            if client_player is not None:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         run = False
@@ -78,35 +82,41 @@ class Game:
                             if pressed[pygame.K_SPACE]:
                                 mouse_x, mouse_y = pygame.mouse.get_pos()
                                 arrow_distance = 400
-                                vector_from_player_to_mouse = (mouse_x - self.player.x, mouse_y - self.player.y)
+                                vector_from_player_to_mouse = (mouse_x - client_player.x, mouse_y - client_player.y)
                                 vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
                                 unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
                                                                     vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
-                                arrow_dest_x = self.player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
-                                arrow_dest_y = self.player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
-                                send_spawn_projectile_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, [client.id],
+                                arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
+                                arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
+                                send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, [client.id],
                                                             type=ProjectileType.ARROW, client_id=client.id)
-                                # send_shoot_command(self.s, generate_projectile_id(), self.player.x, self.player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
+                                # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
 
                         elif event.key == pygame.K_ESCAPE:
                             run = False
 
                 for projectile in game_state.projectiles:
-                    if projectile_intersects_player(projectile, self.player) and not client.id in projectile.friends:
+                    if projectile_intersects_player(projectile, client_player) and not client.id in projectile.friends:
                         if projectile.type == ProjectileType.ARROW:
                             start_of_arrow_x, start_of_arrow_y = projectile.get_start_of_arrow()
                             send_eat_arrow_command(self.s,
-                                                start_of_arrow_x - self.player.x,
-                                                start_of_arrow_y - self.player.y,
-                                                projectile.x - self.player.x,
-                                                projectile.y - self.player.y,
+                                                start_of_arrow_x - client_player.x,
+                                                start_of_arrow_y - client_player.y,
+                                                projectile.x - client_player.x,
+                                                projectile.y - client_player.y,
                                                 client_id=client.id)
                             send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
-                            self.player.hp -= 1
+                            client_player.hp -= 1
                 
-                if self.player.hp == 0:
-                    send_die_command(self.s, client_id=client.id)
-                    self.player = None
+                            if client_player.hp == 0:
+                                death_reason = DeathReason.ARROW
+                                verb = death_reason_to_verb(death_reason)
+                                command = send_die_command(self.s, projectile.player_id, verb, client_id=client.id)                                
+                                killer_id = projectile.player_id
+                                message = f'Player {killer_id} {verb} you!'
+                                self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
+                                                                   datetime.now(), message))
+                                self.player = None
 
             else:
                 for event in pygame.event.get():
@@ -128,6 +138,7 @@ class Game:
             for projectile in game_state.projectiles:
                 projectile.draw(canvas)
             self.draw_health_state(canvas)
+            self.draw_announcements_area(canvas)
             self.canvas.update()
 
         pygame.quit()
@@ -146,6 +157,34 @@ class Game:
                 image_surface = pygame.image.load('assets/heart.png').convert_alpha()
             canvas.blit(image_surface, (current_x, current_y))
             current_x += 75
+
+
+    def add_announcement(self, annoucement: Announcement) -> None:
+        self.announcements = [a for a in self.announcements if a.time > datetime.now() - timedelta(seconds=15)]
+        self.announcements.append(annoucement)
+        self.announcements = self.announcements[-5:]        
+
+
+    def draw_announcements_area(self, canvas: Any) -> None:
+        current_x = 25
+        current_y = self.height - 150
+        font = pygame.font.SysFont("comicsans", 25)
+        self.announcements = [a for a in self.announcements if a.time > datetime.now() - timedelta(seconds=15)]
+        self.announcements = self.announcements[-5:]
+
+        # print([a.message for a in self.announcements])
+
+        for announcement in self.announcements:
+            if announcement.time > datetime.now() - timedelta(seconds=10):
+                opacity = 1.0
+            elif announcement.time < datetime.now() - timedelta(seconds=15):
+                opacity = 0.0
+            else:
+                opacity = 1 - (datetime.now() - announcement.time - timedelta(seconds=10)).total_seconds()/5.0
+            text = font.render(announcement.message, True, (0, 0, 0))
+            text.set_alpha(int(255 * opacity))
+            canvas.blit(text, (current_x, current_y))
+            current_y += 25
 
 
 class GameState:
