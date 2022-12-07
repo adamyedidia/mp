@@ -38,7 +38,7 @@ class Player():
         self.arrows_puncturing = arrows_puncturing if arrows_puncturing is not None else []
 
     def draw(self, g: pygame.surface.Surface):
-        pygame.draw.rect(g, self.color, (int(math.ceil(self.x - self.width / 2)), int(math.ceil(self.y - self.height / 2)), self.width, self.height), 0)
+        pygame.draw.rect(g, self.color, (int(math.ceil(self.x - self.width / 2)), int(math.ceil(self.y - self.height / 2)), self.width, self.height), 0)   
         for arrow in self.arrows_puncturing:
             draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x, arrow[0][1] + self.y), (arrow[1][0] + self.x, arrow[1][1] + self.y))
         # self.healthbar.draw(g, self.x, self.y)
