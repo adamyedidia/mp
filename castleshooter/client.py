@@ -224,6 +224,11 @@ async def client_main() -> None:
 
     try:
         s = socket_package.socket(socket_package.AF_INET, socket_package.SOCK_STREAM)
+        print(SERVER)
+        print(PORT)
+        print(dir(socket_package))
+        print('SO_REUSEADDR' in dir(socket_package))
+        print(s)
         s.connect((SERVER, PORT))
         print('connected to server!')
 
