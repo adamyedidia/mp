@@ -86,6 +86,9 @@ class GameState:
     def handle_data_from_client(self, raw_data: str, conn: Any) -> None:
         for datum in raw_data.split(';'):
             if datum:
+                if 'keep-alive' in datum:
+                    print('Ignoring keep-alive packet')
+                    continue
                 global stored_data
                 # Sometimes packets get split by TCP or something, 
                 # so if we fail to process a packet successfully, we store it and instead try processing it concatenated
