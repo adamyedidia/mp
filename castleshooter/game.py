@@ -138,7 +138,8 @@ class Game:
             for projectile in game_state.projectiles:
                 projectile.draw(canvas)
             self.draw_health_state(canvas)
-            self.draw_announcements_area(canvas)
+            self.draw_announcements(canvas)
+            self.draw_big_text(canvas)
             self.canvas.update()
 
         pygame.quit()
@@ -165,7 +166,7 @@ class Game:
         self.announcements = self.announcements[-5:]        
 
 
-    def draw_announcements_area(self, canvas: Any) -> None:
+    def draw_announcements(self, canvas: Any) -> None:
         current_x = 25
         current_y = self.height - 150
         font = pygame.font.SysFont("comicsans", 25)
@@ -185,6 +186,12 @@ class Game:
             text.set_alpha(int(255 * opacity))
             canvas.blit(text, (current_x, current_y))
             current_y += 25
+
+    def draw_big_text(self, canvas: Any) -> None:
+        if self.player is None:
+            font = pygame.font.SysFont("comicsans", 35)
+            text = font.render('You died. Press enter to respawn.', True, (0, 0, 0))
+            canvas.blit(text, (120, 350))
 
 
 class GameState:
