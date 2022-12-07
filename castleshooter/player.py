@@ -9,7 +9,7 @@ from direction import Direction, to_optional_direction
 from item import Item, Sword
 from json.decoder import JSONDecodeError
 
-from utils import to_optional_int
+from utils import to_optional_int, draw_text_centered_on_rectangle
 
 BASE_MAX_HP = 4
 
@@ -38,9 +38,13 @@ class Player():
         self.arrows_puncturing = arrows_puncturing if arrows_puncturing is not None else []
 
     def draw(self, g: pygame.surface.Surface):
-        pygame.draw.rect(g, self.color, (int(math.ceil(self.x - self.width / 2)), int(math.ceil(self.y - self.height / 2)), self.width, self.height), 0)
+        x = int(math.ceil(self.x - self.width / 2))
+        y = int(math.ceil(self.y - self.height / 2))
+        pygame.draw.rect(g, self.color, (x, y, self.width, self.height), 0)
+        pygame.draw.rect(g, (0,0,0), (x, y, self.width, self.height), width=2)
         for arrow in self.arrows_puncturing:
             draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x, arrow[0][1] + self.y), (arrow[1][0] + self.x, arrow[1][1] + self.y))
+        draw_text_centered_on_rectangle(g, str(self.client_id), x, y, self.width, self.height, 35)
         # self.healthbar.draw(g, self.x, self.y)
         # self.item.draw(g, self.x, self.y)
 
