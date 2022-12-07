@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 import gevent
+from death_reason import DeathReason
 from projectile import ProjectileType
 from settings import TEST_LAG
 from direction import Direction
@@ -119,9 +120,11 @@ def send_ack(conn: Any, packet_id: int) -> None:
     conn.sendall(bytes(packet.to_str(), 'utf-8'))    
 
 
-def send_command(conn: Any, command: Command, *, client_id: int) -> None:
+def send_command(conn: Any, command: Command, *, client_id: int) -> Command:
     store_command(command, for_client=client_id, client_id=client_id)
     send_without_retry(conn, f'command|{json.dumps(command.to_json())}', client_id=client_id)
+
+    return command
 
 
 def _generate_next_command_id(client_id: Optional[int]) -> int:
@@ -129,46 +132,47 @@ def _generate_next_command_id(client_id: Optional[int]) -> int:
     rset('next_command_id', next_command_id, client_id=client_id)
     return next_command_id
 
-def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> None:
-    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
+def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
                         type=CommandType.MOVE, time=datetime.now(), client_id=client_id, 
                         data={'x': x_pos, 'y': y_pos}), client_id=client_id)
 
 
-def send_spawn_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> None:
-    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
+def send_spawn_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
                         type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
                         data={'x': x_pos, 'y': y_pos}), client_id=client_id)
 
 
-def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: int) -> None:
-    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
                  type=CommandType.TURN, time=datetime.now(), client_id=client_id, 
                  data={'dir': direction.value if direction else None}),
                  client_id=client_id)
 
 
 def send_spawn_projectile_command(conn: Any, projectile_id: int, source_x: int, source_y: int, dest_x: int, dest_y: int, 
-                                  friends: list[int], type: ProjectileType, *, client_id: int) -> None:
-    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                                  friends: list[int], type: ProjectileType, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
                  type=CommandType.SPAWN_PROJECTILE, time=datetime.now(), client_id=client_id,
                  data={'id': projectile_id, 'source_x': source_x, 'source_y': source_y, 'dest_x': dest_x, 'dest_y': dest_y, 
                  'type': type.value, 'player_id': client_id, 'friends': friends}), client_id=client_id)
 
 
-def send_eat_arrow_command(conn: Any, arrow_start_x: int, arrow_start_y: int, arrow_end_x: int, arrow_end_y: int, *, client_id: int) -> None:
-    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_eat_arrow_command(conn: Any, arrow_start_x: int, arrow_start_y: int, arrow_end_x: int, arrow_end_y: int, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
                  type=CommandType.EAT_ARROW, time=datetime.now(), client_id=client_id,
                  data={'arrow_start_x': arrow_start_x, 'arrow_start_y': arrow_start_y, 'arrow_end_x': arrow_end_x, 
                  'arrow_end_y': arrow_end_y, 'player_id': client_id}), client_id=client_id)
 
 
-def send_remove_projectile_command(conn: Any, projectile_id: int, *, client_id: int) -> None:
-    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_remove_projectile_command(conn: Any, projectile_id: int, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
                  type=CommandType.REMOVE_PROJECTILE, time=datetime.now(), client_id=client_id,
                  data={'projectile_id': projectile_id}), client_id=client_id)
 
 
-def send_die_command(conn: Any, *, client_id: int) -> None:
-    send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
-                 type=CommandType.DIE, time=datetime.now(), client_id=client_id), client_id=client_id)
+def send_die_command(conn: Any, killer_id: int, verb: str, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                 type=CommandType.DIE, time=datetime.now(), data={'killer_id': killer_id, 'verb': verb}, 
+                 client_id=client_id), client_id=client_id)
