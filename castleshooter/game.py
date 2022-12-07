@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 import json
 from math import sqrt
@@ -40,7 +41,7 @@ class Game:
         self.canvas = Canvas(self.width, self.height, "Testing...")
         self.announcements: list[Announcement] = []
 
-    def run(self):
+    async def run(self):
         print('Running the game!')
         clock = pygame.time.Clock()
         run = True
@@ -141,6 +142,8 @@ class Game:
             self.draw_announcements(canvas)
             self.draw_big_text(canvas)
             self.canvas.update()
+
+            await asyncio.sleep(0)
 
         pygame.quit()
 

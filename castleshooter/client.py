@@ -3,7 +3,7 @@ from announcement import Announcement, get_announcement_idempotency_key_for_comm
 from death_reason import DeathReason, death_reason_to_verb
 from command import Command, CommandType, get_commands_by_player, commands_by_player, get_commands_by_projectile, commands_by_projectile
 from settings import PORT, SERVER
-import socket
+import socket as socket_package
 from typing import Any, Optional
 from redis_utils import rset, rget, redis_lock    
 from _thread import start_new_thread
@@ -18,6 +18,7 @@ from game import Game, GameState, game_state_snapshots
 from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
 from time import sleep
 import pygame
+import asyncio
 
 
 game: Optional[Game] = None
@@ -28,7 +29,7 @@ def get_game() -> Optional[Game]:
     return game
 
 
-def start_up_game(socket: Any) -> None:
+async def start_up_game(socket: Any) -> None:
     print('starting up game!')
     assert client.id is not None
     sleep(0.5)
@@ -36,7 +37,7 @@ def start_up_game(socket: Any) -> None:
     send_spawn_command(socket, 300, 300, client_id=client.id)    
     global game
     game = Game(750,750, client, socket)
-    game.run()    
+    await game.run()    
 
 
 def _handle_client_id_packet(payload: str) -> bool:
@@ -186,7 +187,7 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
     return False
 
 
-def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
+async def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
     while True:
         global stored_data
         raw_data = socket.recv(1048576).decode()
@@ -214,26 +215,28 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
                 else:
                     _clear_stored_data(stored_data)
 
+        await asyncio.sleep(0)
 
-def client_main() -> None:
+
+async def client_main() -> None:
     pygame.init()
     pygame.font.init()
 
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s = socket_package.socket(socket_package.AF_INET, socket_package.SOCK_STREAM)
         s.connect((SERVER, PORT))
         print('connected to server!')
 
         print('initialized game!')
-        thread = Thread(target=listen_for_server_updates, args=(s,True))
+        thread = Thread(target=lambda: asyncio.run(listen_for_server_updates(s,True)))
         thread.start()
         print('Listening for server updates!')
         thread.join()
-        start_new_thread(listen_for_server_updates, (s,))
-        start_up_game(s)
+        start_new_thread(lambda: asyncio.run(listen_for_server_updates(s,False)), tuple([]))
+        await start_up_game(s)
     finally:
         print('Closing the socket!!')
         s.close()
 
 if __name__ == '__main__':
-    client_main()
+    asyncio.run(client_main())
