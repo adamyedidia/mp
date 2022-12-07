@@ -111,7 +111,7 @@ class GameState:
 def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> int:
     if active_connections_by_id:
         return max(active_connections_by_id.keys()) + 1
-    return 0
+    return 1
 
 
 def _handle_incoming_connection(connection: Connection, game_state: GameState) -> None:
