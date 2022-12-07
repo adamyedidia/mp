@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
-from command import Command, get_commands_by_player, commands_by_player, get_commands_by_projectile, commands_by_projectile
-import game
+from announcement import Announcement, get_announcement_idempotency_key_for_command
+from death_reason import DeathReason, death_reason_to_verb
+from command import Command, CommandType, get_commands_by_player, commands_by_player, get_commands_by_projectile, commands_by_projectile
 from settings import PORT, SERVER
 import socket
 from typing import Any, Optional
@@ -13,9 +14,18 @@ from packet import (
 )
 import json
 from json.decoder import JSONDecodeError
-from game import GameState, game_state_snapshots
+from game import Game, GameState, game_state_snapshots
 from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
 from time import sleep
+import pygame
+
+
+game: Optional[Game] = None
+
+
+def get_game() -> Optional[Game]:
+    global game
+    return game
 
 
 def start_up_game(socket: Any) -> None:
@@ -24,8 +34,9 @@ def start_up_game(socket: Any) -> None:
     sleep(0.5)
     print('Sending the spawn command!')
     send_spawn_command(socket, 300, 300, client_id=client.id)    
-    g = game.Game(750,750, client, socket)
-    g.run()    
+    global game
+    game = Game(750,750, client, socket)
+    game.run()    
 
 
 def _handle_client_id_packet(payload: str) -> bool:
@@ -35,6 +46,27 @@ def _handle_client_id_packet(payload: str) -> bool:
         client.set_id(int(raw_client_id))
         return True
     return False    
+
+
+def handle_annoucements_for_commands(commands_for_player: list[Command]) -> None:
+    game = get_game()
+    if game is not None:
+        announcement_idempotency_keys = [a.idempotency_key for a in game.announcements]        
+        for command in commands_for_player:
+            command_idempotency_key = get_announcement_idempotency_key_for_command(command)
+            if command_idempotency_key not in announcement_idempotency_keys:
+                if command.type == CommandType.DIE:
+                    assert command.data
+                    verb = command.data['verb']
+                    killer_id = int(command.data['killer_id'])
+                    victim_id = command.client_id
+                    if victim_id == client.id:
+                        message = f'Player {killer_id} {verb} you!'
+                    elif killer_id == client.id:
+                        message = f'You {verb} player {victim_id}!'
+                    else:
+                        message = f'Player {killer_id} {verb} player {victim_id}!'
+                    game.add_announcement(Announcement(command_idempotency_key, datetime.now(), message))
 
 
 def _handle_payload_from_server(payload: str) -> None:
@@ -71,6 +103,7 @@ def _handle_payload_from_server(payload: str) -> None:
                                                       and c.id not in [ci.id for ci in commands_for_player])]
                 commands_for_player.extend(commands_for_player_from_server)
                 commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]
+                handle_annoucements_for_commands(commands_for_player)
 
             for player_id, raw_commands_from_server in raw_commands_by_player_from_server.items():
                 if player_id in player_ids_handled:
@@ -80,7 +113,8 @@ def _handle_payload_from_server(payload: str) -> None:
                                              key=lambda c: c.time)                
                 commands_for_player = [c for c in commands_for_player 
                                        if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
-                commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]                                             
+                commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]     
+                handle_annoucements_for_commands(commands_for_player)                                        
 
         if 'commands_by_projectile' in key:
             raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id)
@@ -182,6 +216,8 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
 
 
 def client_main() -> None:
+    pygame.init()
+    pygame.font.init()
 
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
