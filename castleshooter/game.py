@@ -8,10 +8,11 @@ from typing import Any, Optional
 import pygame
 from pygame import Color
 from announcement import Announcement, get_announcement_idempotency_key_for_command
+from weapon import Weapon, weapon_to_pygame_image
 from death_reason import DeathReason, death_reason_to_verb
 from command import get_commands_by_projectile
 from packet import send_eat_arrow_command, send_remove_projectile_command, send_die_command, send_spawn_command
-from projectile import projectile_intersects_player
+from projectile import projectile_intersects_player, draw_arrow, ARROW_COLOR
 from projectile import generate_projectile_id, Projectile, ProjectileType
 from direction import determine_direction_from_keyboard, to_optional_direction
 from command import Command, CommandType, get_commands_by_player
@@ -81,17 +82,18 @@ class Game:
                         elif event.key == pygame.K_SPACE:
                             pressed = pygame.key.get_pressed()
                             if pressed[pygame.K_SPACE]:
-                                mouse_x, mouse_y = pygame.mouse.get_pos()
-                                arrow_distance = 400
-                                vector_from_player_to_mouse = (mouse_x - client_player.x, mouse_y - client_player.y)
-                                vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
-                                unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
-                                                                    vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
-                                arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
-                                arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
-                                send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, [client.id],
-                                                            type=ProjectileType.ARROW, client_id=client.id)
-                                # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
+                                if client_player.weapon == Weapon.BOW:
+                                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                                    arrow_distance = 400
+                                    vector_from_player_to_mouse = (mouse_x - client_player.x, mouse_y - client_player.y)
+                                    vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
+                                    unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
+                                                                        vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
+                                    arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
+                                    arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
+                                    send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, [client.id],
+                                                                type=ProjectileType.ARROW, client_id=client.id)
+                                    # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
 
                         elif event.key == pygame.K_ESCAPE:
                             run = False
@@ -141,6 +143,7 @@ class Game:
             self.draw_health_state(canvas)
             self.draw_announcements(canvas)
             self.draw_big_text(canvas)
+            self.draw_weapon_and_ammo(canvas)
             self.canvas.update()
 
         pygame.quit()
@@ -193,6 +196,21 @@ class Game:
             # font = pygame.font.SysFont("comicsans", 35)
             # text = font.render('You died. Press enter to respawn.', True, (0, 0, 0))
             # canvas.blit(text, (120, 350))
+
+    def draw_weapon_and_ammo(self, canvas: Any) -> None:
+        if self.player and self.player.weapon:
+            current_x = self.width - 110
+            current_y = self.height - 110
+            image_surface = pygame.transform.scale(weapon_to_pygame_image(self.player.weapon), (100, 100)).convert_alpha()
+            canvas.blit(image_surface, (current_x, current_y))
+
+            arrow_bottom = self.height - 55
+            arrow_top = self.height - 85
+
+            if self.player.weapon == Weapon.BOW:
+                for _ in range(self.player.ammo):
+                    current_x -= 30
+                    draw_arrow(canvas, ARROW_COLOR, (current_x, arrow_bottom), (current_x, arrow_top))
 
 
 class GameState:

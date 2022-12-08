@@ -8,6 +8,7 @@ from projectile import ARROW_COLOR
 from direction import Direction, to_optional_direction
 from item import Item, Sword
 from json.decoder import JSONDecodeError
+from weapon import Weapon
 
 from utils import to_optional_int, draw_text_centered_on_rectangle
 
@@ -32,6 +33,8 @@ class Player():
         self.healthbar: HealthBar = healthbar if healthbar is not None else HealthBar()
         self.item: Item = Sword()
         self.hp = hp
+        self.ammo = 5
+        self.weapon = Weapon.BOW
 
         self.speed: int = 200
         self.color = color
