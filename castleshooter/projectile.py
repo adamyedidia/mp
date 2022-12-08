@@ -11,6 +11,7 @@ from direction import Direction
 if TYPE_CHECKING:
     from player import Player
 
+
 def draw_arrow(screen, colour, start, end):
     # https://stackoverflow.com/questions/43527894/drawing-arrowheads-which-follow-the-direction-of-the-line-in-pygame
     pygame.draw.line(screen,colour,start,end,2)
@@ -44,7 +45,6 @@ class Projectile:
 
         # client_ids of friendly players
         self.friends = friends if friends is not None else []
-
 
     def draw(self, g: pygame.surface.Surface):
         if self.type == ProjectileType.ARROW:
