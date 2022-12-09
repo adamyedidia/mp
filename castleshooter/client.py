@@ -14,7 +14,7 @@ from packet import (
 )
 import json
 from json.decoder import JSONDecodeError
-from game import Game, GameState, game_state_snapshots
+from game import Game, GameState, game_state_snapshots, run_spontaneous_game_processes
 from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
 from time import sleep
 import pygame
@@ -36,6 +36,7 @@ def start_up_game(socket: Any) -> None:
     send_spawn_command(socket, 300, 300, client_id=client.id)    
     global game
     game = Game(750,750, client, socket)
+    start_new_thread(run_spontaneous_game_processes, (game,))
     game.run()    
 
 

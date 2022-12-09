@@ -1,48 +1,42 @@
+from typing import Any, Optional
+
+from enum import Enum
 from typing import TYPE_CHECKING
 import pygame
 import json
+from redis_utils import rget, rset
+from weapon import weapon_to_pygame_image, Weapon
 if TYPE_CHECKING:
     from player import Player
 
 
-class Item():
-    def __init__(self, name: str = 'None', range: int = 0):
-        self.name = name
-        self.range = range
-
-    def draw(self, g: pygame.surface.Surface, x, y):
-        pass
-
-    def use(self, using_player: 'Player', affected_players: list['Player']):
-        pass
-
-    def hit_box(self):
-        # TODO: this function will return a function that decides
-        #  whether another player's coordinates x, y are within a hitbox
-        #  or something like that
-        pass
-
-    def to_json(self):
-        return json.dumps({
-            'name': self.name,
-            'range': self.range,
-        })
-
-    def from_json(self, j: str):
-        d: dict = json.loads(j)
-        self.name = d['name']
-        self.range = d['range']
+class ItemCategory(Enum):
+    WEAPON = 'weapon'
 
 
-class Sword(Item):
-    def __init__(self):
-        Item('sword', 50)
+class ItemType(Enum):
+    BOW = 'bow'
+    DAGGER = 'dagger'
 
-    def draw(self, g: pygame.surface.Surface, x: int, y: int):
-        pygame.draw.rect(g, (0,0,0), (x+30, y+30, 15, 5))
-        pygame.draw.rect(g, (0,0,0), (x+35, y+15, 5, 27))
 
-    def use(self, using_player: 'Player', affected_players: list['Player']):
-        using_player.item = Item()
-        for damaged_player in affected_players:
-            damaged_player.healthbar.damage()
+class Item:
+    def __init__(self, id: int, x: int, y: int, category: ItemCategory, type: ItemType):
+        self.id = id
+        self.x = x
+        self.y = y
+        self.category = category
+        self.type = type
+
+    def draw(self, canvas: Any) -> None:
+        if self.category == ItemCategory.WEAPON:
+            image_surface = pygame.transform.scale(weapon_to_pygame_image(Weapon(self.type.value)), (50, 50)).convert_alpha()
+            canvas.blit(image_surface, (self.x - 25, self.y - 25))        
+
+
+NEXT_ITEM_ID_REDIS_KEY = 'next_item_id'
+
+
+def generate_next_item_id(*, client_id: Optional[int]) -> int:
+    next_item_id = int(rget(NEXT_ITEM_ID_REDIS_KEY, client_id=client_id) or '0')
+    rset(NEXT_ITEM_ID_REDIS_KEY, next_item_id + 1, client_id=client_id)
+    return next_item_id
