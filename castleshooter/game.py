@@ -161,20 +161,22 @@ class Game:
                                                                    datetime.now(), message))
                                 self.player = None
 
+                            self.target = None
+
+                min_distance = DAGGER_RANGE
+                if client_player.weapon == Weapon.DAGGER:
+                    for possible_target in game_state.players:
+                        if possible_target.client_id != client_player.client_id:
+                            distance = sqrt((possible_target.x - client_player.x)**2 + (possible_target.y - client_player.y)**2)
+                            if distance < min_distance:
+                                self.target = possible_target
+                                min_distance = distance 
+
             else:
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                         send_spawn_command(self.s, 300, 300, client_id=client.id)
-
-            self.target = None
-            min_distance = DAGGER_RANGE
-            if client_player.weapon == Weapon.DAGGER:
-                for possible_target in game_state.players:
-                    if possible_target.client_id != client_player.client_id:
-                        distance = sqrt((possible_target.x - client_player.x)**2 + (possible_target.y - client_player.y)**2)
-                        if distance < min_distance:
-                            self.target = possible_target
-                            min_distance = distance                 
+                
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
@@ -183,11 +185,12 @@ class Game:
             #         self.send_data()
 
             # Update Canvas
+            client_player = self.player
             self.canvas.draw_background()
             canvas = self.canvas.get_canvas()
             for player in game_state.players:
                 player.draw(canvas)
-                if target is not None and player.client_id != client_player.client_id and player.client_id == target.client_id:
+                if target is not None and client_player is not None and player.client_id != client_player.client_id and player.client_id == target.client_id:
                     pygame.draw.circle(canvas, (0,0,0), (player.x, player.y), 40, width=2)
             for projectile in game_state.projectiles:
                 projectile.draw(canvas)
