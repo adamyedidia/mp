@@ -31,7 +31,12 @@ from packet import (
 from json.decoder import JSONDecodeError
 
 from utils import MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_rectangle
+from item import Item, ItemCategory, ItemType, generate_next_item_id
+from time import sleep
+import time
 
+
+ITEM_GENERATION_RATE = 0.2
 
 SHIFT_KEYS = [pygame.K_RSHIFT, pygame.K_LSHIFT]
 NUMBER_KEYS = {1: pygame.K_1, 
@@ -42,6 +47,26 @@ NUMBER_KEYS = {1: pygame.K_1,
                6: pygame.K_6, 
                7: pygame.K_7, 
                8: pygame.K_8}
+
+
+def run_spontaneous_game_processes(game: 'Game') -> None:
+    while True:
+        if time.time() % 0.1 < 0.01 and time.time() % 0.01 >= 0.0:
+            if random.random() < ITEM_GENERATION_RATE * 0.1:
+                generate_item(game)
+        sleep(0.01)
+
+
+def generate_item(game: 'Game') -> None:
+    next_item_id = generate_next_item_id(client_id=client.id)
+    category = ItemCategory.WEAPON
+    if random.random() < 0.5:
+        type = ItemType.BOW
+    else:
+        type = ItemType.DAGGER
+    game.items[next_item_id] = Item(next_item_id, random.randint(1, game.width-1), random.randint(1, game.width-1),
+                                    category, type)
+
 
 class Game:
     def __init__(self, w: int, h: int, client: Client, socket: socket):
@@ -57,6 +82,8 @@ class Game:
         self.commands_handled: list[Command] = []
         self.target: Optional[Player] = None
         self.mouse_target: Optional[Player] = None
+        self.items: dict[int, Item] = {}
+        self.item_target: Optional[Item] = None
 
     def run(self):
         print('Running the game!')
@@ -82,6 +109,7 @@ class Game:
 
             client_player = self.player
             target = self.target
+            game_items = self.items.copy()
 
             if client_player is not None:
                 for event in pygame.event.get():
@@ -113,9 +141,21 @@ class Game:
                                                                 type=ProjectileType.ARROW, client_id=client.id)
                                     # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
                                     client_player.ammo -= 1
+                                    if client_player.ammo <= 0:
+                                        client_player.weapon = None
                                 elif client_player.weapon == Weapon.DAGGER and target is not None:
                                     send_lose_hp_command(self.s, client_player.client_id, target.client_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
                                     send_teleport_command(self.s, target.x, target.y, client_id=client.id)
+                                    client_player.weapon = None
+
+                        elif event.key == pygame.K_e:
+                            if self.item_target is not None:
+                                del self.items[self.item_target.id]
+                                if self.item_target.category == ItemCategory.WEAPON:
+                                    client_player.weapon = Weapon(self.item_target.type.value)
+                                    if client_player.weapon == Weapon.BOW:
+                                        client_player.ammo = 3
+                                self.item_target = None
 
                         elif event.key in [*SHIFT_KEYS, *NUMBER_KEYS.values()]:
                             pressed = pygame.key.get_pressed()
@@ -149,20 +189,10 @@ class Game:
                                                 client_id=client.id)
                             send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
                             client_player.hp -= 1
-                            self.maybe_die(client_player, DeathReason.ARROW, projectile.player_id)
+                            verb = death_reason_to_verb(DeathReason.ARROW)
+                            self.maybe_die(client_player, verb, projectile.player_id)
 
-                            if client_player.hp == 0:
-                                death_reason = DeathReason.ARROW
-                                verb = death_reason_to_verb(death_reason)
-                                command = send_die_command(self.s, projectile.player_id, verb, client_id=client.id)                                
-                                killer_id = projectile.player_id
-                                message = f'Player {killer_id} {verb} you!'
-                                self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
-                                                                   datetime.now(), message))
-                                self.player = None
-
-                            self.target = None
-
+                self.target = None
                 min_distance = DAGGER_RANGE
                 if client_player.weapon == Weapon.DAGGER:
                     for possible_target in game_state.players:
@@ -172,11 +202,18 @@ class Game:
                                 self.target = possible_target
                                 min_distance = distance 
 
+                self.item_target = None
+                min_distance = DAGGER_RANGE                    
+                for possible_item_target in game_items.values():
+                    distance = sqrt((possible_item_target.x - client_player.x)**2 + (possible_item_target.y - client_player.y)**2)
+                    if distance < min_distance:
+                        self.item_target = possible_item_target
+                        min_distance = distance 
+
             else:
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                        send_spawn_command(self.s, 300, 300, client_id=client.id)
-                
+                        send_spawn_command(self.s, 300, 300, client_id=client.id)       
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
@@ -192,8 +229,19 @@ class Game:
                 player.draw(canvas)
                 if target is not None and client_player is not None and player.client_id != client_player.client_id and player.client_id == target.client_id:
                     pygame.draw.circle(canvas, (0,0,0), (player.x, player.y), 40, width=2)
+            for item in game_items.values():
+                item.draw(canvas)
+
+            if self.item_target is not None:
+                if self.item_target.category == ItemCategory.WEAPON and client_player is not None and client_player.weapon is not None:
+                    color = (255, 0, 0)
+                else:
+                    color = (0, 0, 0)
+                pygame.draw.circle(canvas, color, (self.item_target.x, self.item_target.y), 40, width = 2)
+
             for projectile in game_state.projectiles:
                 projectile.draw(canvas)
+
             self.draw_health_state(canvas)
             self.draw_announcements(canvas)
             self.draw_big_text(canvas)
@@ -203,12 +251,13 @@ class Game:
         pygame.quit()
 
     def draw_health_state(self, canvas: Any) -> None:
-        if self.player is None:
+        client_player = self.player
+        if client_player is None:
             return
         current_x = 25
         current_y = 25
-        for i in range(max(BASE_MAX_HP, self.player.hp)):
-            if i >= self.player.hp:
+        for i in range(max(BASE_MAX_HP, client_player.hp)):
+            if i >= client_player.hp:
                 image_surface = pygame.image.load('assets/empty_heart.png').convert_alpha()
             elif i >= BASE_MAX_HP:
                 image_surface = pygame.image.load('assets/blue_heart.png').convert_alpha()
@@ -259,17 +308,18 @@ class Game:
             # canvas.blit(text, (120, 350))
 
     def draw_weapon_and_ammo(self, canvas: Any) -> None:
-        if self.player and self.player.weapon:
+        client_player = self.player
+        if client_player and client_player.weapon:
             current_x = self.width - 110
             current_y = self.height - 110
-            image_surface = pygame.transform.scale(weapon_to_pygame_image(self.player.weapon), (100, 100)).convert_alpha()
+            image_surface = pygame.transform.scale(weapon_to_pygame_image(client_player.weapon), (100, 100)).convert_alpha()
             canvas.blit(image_surface, (current_x, current_y))
 
             arrow_bottom = self.height - 55
             arrow_top = self.height - 85
 
-            if self.player.weapon == Weapon.BOW:
-                for _ in range(self.player.ammo):
+            if client_player.weapon == Weapon.BOW:
+                for _ in range(client_player.ammo):
                     current_x -= 30
                     draw_arrow(canvas, ARROW_COLOR, (current_x, arrow_bottom), (current_x, arrow_top))
 

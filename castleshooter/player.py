@@ -6,7 +6,6 @@ import json
 from projectile import draw_arrow
 from projectile import ARROW_COLOR
 from direction import Direction, to_optional_direction
-from item import Item, Sword
 from json.decoder import JSONDecodeError
 from weapon import Weapon
 
@@ -31,9 +30,8 @@ class Player():
         self.height = 50
 
         self.healthbar: HealthBar = healthbar if healthbar is not None else HealthBar()
-        self.item: Item = Sword()
         self.hp = hp
-        self.ammo = 5
+        self.ammo = 0
         self.weapon = Weapon.DAGGER
 
         self.speed: int = 200
@@ -48,8 +46,6 @@ class Player():
         for arrow in self.arrows_puncturing:
             draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x, arrow[0][1] + self.y), (arrow[1][0] + self.x, arrow[1][1] + self.y))
         draw_text_centered_on_rectangle(g, str(self.client_id), x, y, self.width, self.height, 35)
-        # self.healthbar.draw(g, self.x, self.y)
-        # self.item.draw(g, self.x, self.y)
 
     def make_valid_position(self, w: int, h: int) -> None:
         self.x = max(0, self.x)
@@ -67,7 +63,6 @@ class Player():
             'healthbar': self.healthbar.to_json(),
             'direction': self.direction.value if self.direction is not None else None,
             'arrows_puncturing': self.arrows_puncturing,
-            # 'item': self.item.to_json(),
         })
 
     @classmethod
@@ -91,7 +86,6 @@ class Player():
         self.dest_y = d['dest_y']
         self.direction = to_optional_direction(d['direction'])
         self.healthbar.update_from_json(d['healthbar'])
-        # self.item.from_json(d['item'])  # TODO: fix this
 
     def update_info_from_inferred_game_state(self, player: 'Player') -> None:
         self.x = player.x
