@@ -75,15 +75,15 @@ def handle_hp_loss_for_commands(commands_for_player: list[Command]) -> None:
         player = game.player
         if player is not None:
             for command in commands_for_player:
-                if command.id not in [c.id for c in game.commands_handled]:
+                if command.id not in [c.id for c in game.commands_handled] and command.client_id == client.id:
                     if command.type == CommandType.LOSE_HP:
                         assert command.data
                         verb = command.data['verb']
                         player.hp -= command.data['hp']
                         game.maybe_die(player, verb, killer_id=command.data['killer_id'])
 
-                    game.commands_handled.append(command)
-                    game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
+                        game.commands_handled.append(command)
+                        game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
 
 
 def _handle_payload_from_server(payload: str) -> None:
@@ -121,6 +121,7 @@ def _handle_payload_from_server(payload: str) -> None:
                 commands_for_player.extend(commands_for_player_from_server)
                 commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]
                 handle_announcements_for_commands(commands_for_player)
+                handle_hp_loss_for_commands(commands_for_player)
 
             for player_id, raw_commands_from_server in raw_commands_by_player_from_server.items():
                 if player_id in player_ids_handled:
@@ -131,7 +132,8 @@ def _handle_payload_from_server(payload: str) -> None:
                 commands_for_player = [c for c in commands_for_player 
                                        if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
                 commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]     
-                handle_announcements_for_commands(commands_for_player)                                        
+                handle_announcements_for_commands(commands_for_player)   
+                handle_hp_loss_for_commands(commands_for_player)                                     
 
         if 'commands_by_projectile' in key:
             raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id)
