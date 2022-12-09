@@ -176,3 +176,15 @@ def send_die_command(conn: Any, killer_id: int, verb: str, *, client_id: int) ->
     return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
                  type=CommandType.DIE, time=datetime.now(), data={'killer_id': killer_id, 'verb': verb}, 
                  client_id=client_id), client_id=client_id)
+
+
+def send_lose_hp_command(conn: Any, killer_id: int, victim_id: int, verb: str, hp: int, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                        type=CommandType.LOSE_HP, time=datetime.now(), 
+                        data={'killer_id': killer_id, 'verb': verb, 'hp': hp}, client_id=victim_id), client_id=client_id)
+
+
+def send_teleport_command(conn: Any, x: int, y: int, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                        type=CommandType.TELEPORT, time=datetime.now(), data={'x': x, 'y': y}, 
+                        client_id=client_id), client_id=client_id)

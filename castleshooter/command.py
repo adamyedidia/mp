@@ -22,6 +22,8 @@ class CommandType(Enum):
     EAT_ARROW = 'eat_arrow'
     REMOVE_PROJECTILE = 'remove_projectile'
     DIE = 'die'
+    LOSE_HP = 'lose_hp'
+    TELEPORT = 'teleport'
 
 
 PROJECTILE_COMMAND_TYPES = [CommandType.REMOVE_PROJECTILE]

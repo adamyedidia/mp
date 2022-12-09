@@ -8,7 +8,7 @@ from typing import Any, Optional
 import pygame
 from pygame import Color
 from announcement import Announcement, get_announcement_idempotency_key_for_command
-from weapon import Weapon, weapon_to_pygame_image
+from weapon import Weapon, weapon_to_pygame_image, DAGGER_RANGE
 from death_reason import DeathReason, death_reason_to_verb
 from command import get_commands_by_projectile
 from packet import send_eat_arrow_command, send_remove_projectile_command, send_die_command, send_spawn_command
@@ -24,11 +24,24 @@ from canvas import Canvas
 from client_utils import Client, client
 from direction import direction_to_unit_vector
 
-from packet import send_move_command, send_without_retry, send_turn_command, send_spawn_projectile_command
+from packet import (
+    send_move_command, send_without_retry, send_turn_command, send_spawn_projectile_command, send_teleport_command,
+    send_lose_hp_command,
+)
 from json.decoder import JSONDecodeError
 
 from utils import MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_rectangle
 
+
+SHIFT_KEYS = [pygame.K_RSHIFT, pygame.K_LSHIFT]
+NUMBER_KEYS = {1: pygame.K_1, 
+               2: pygame.K_2, 
+               3: pygame.K_3, 
+               4: pygame.K_4, 
+               5: pygame.K_5, 
+               6: pygame.K_6, 
+               7: pygame.K_7, 
+               8: pygame.K_8}
 
 class Game:
     def __init__(self, w: int, h: int, client: Client, socket: socket):
@@ -41,6 +54,9 @@ class Game:
         self.player: Optional[Player] = Player(client.id, 300, 300)
         self.canvas = Canvas(self.width, self.height, "Testing...")
         self.announcements: list[Announcement] = []
+        self.commands_handled: list[Command] = []
+        self.target: Optional[Player] = None
+        self.mouse_target: Optional[Player] = None
 
     def run(self):
         print('Running the game!')
@@ -65,6 +81,8 @@ class Game:
                         self.player = player
 
             client_player = self.player
+            target = self.target
+
             if client_player is not None:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -82,7 +100,7 @@ class Game:
                         elif event.key == pygame.K_SPACE:
                             pressed = pygame.key.get_pressed()
                             if pressed[pygame.K_SPACE]:
-                                if client_player.weapon == Weapon.BOW:
+                                if client_player.weapon == Weapon.BOW and client_player.ammo > 0:
                                     mouse_x, mouse_y = pygame.mouse.get_pos()
                                     arrow_distance = 400
                                     vector_from_player_to_mouse = (mouse_x - client_player.x, mouse_y - client_player.y)
@@ -94,6 +112,27 @@ class Game:
                                     send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, [client.id],
                                                                 type=ProjectileType.ARROW, client_id=client.id)
                                     # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
+                                    client_player.ammo -= 1
+                                elif client_player.weapon == Weapon.DAGGER and target is not None:
+                                    send_lose_hp_command(self.s, client_player.client_id, target.client_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
+                                    send_teleport_command(self.s, target.x, target.y, client_id=client.id)
+
+                        elif event.key in [*SHIFT_KEYS, *NUMBER_KEYS.values()]:
+                            pressed = pygame.key.get_pressed()
+                            shift_pressed = False
+                            number_pressed: Optional[int] = None
+                            for key in SHIFT_KEYS:
+                                if pressed[key]:
+                                    shift_pressed = True
+                            for number, key in NUMBER_KEYS.items():
+                                if pressed[key]:
+                                    number_pressed = number
+                            if shift_pressed and number_pressed is not None and client_player.weapon == Weapon.DAGGER:
+                                pressed_target_id = number_pressed
+                                for pressed_target in target.players:
+                                    if pressed_target.id == pressed_target_id and sqrt((player.x - client_player.x)**2 + (player.y - client_player.y)**2) < DAGGER_RANGE:
+                                        send_lose_hp_command(self.s, client_player.client_id, pressed_target_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
+                                        send_teleport_command(self.s, pressed_target.x, pressed_target.y, client_id=client.id)
 
                         elif event.key == pygame.K_ESCAPE:
                             run = False
@@ -110,7 +149,8 @@ class Game:
                                                 client_id=client.id)
                             send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
                             client_player.hp -= 1
-                
+                            self.maybe_die(client_player, DeathReason.ARROW, projectile.player_id)
+
                             if client_player.hp == 0:
                                 death_reason = DeathReason.ARROW
                                 verb = death_reason_to_verb(death_reason)
@@ -126,6 +166,15 @@ class Game:
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                         send_spawn_command(self.s, 300, 300, client_id=client.id)
 
+            self.target = None
+            min_distance = DAGGER_RANGE
+            if client_player.weapon == Weapon.DAGGER:
+                for possible_target in game_state.players:
+                    if possible_target.client_id != client_player.client_id:
+                        distance = sqrt((possible_target.x - client_player.x)**2 + (possible_target.y - client_player.y)**2)
+                        if distance < min_distance:
+                            self.target = possible_target
+                            min_distance = distance                 
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
@@ -138,6 +187,8 @@ class Game:
             canvas = self.canvas.get_canvas()
             for player in game_state.players:
                 player.draw(canvas)
+                if target is not None and player.client_id != client_player.client_id and player.client_id == target.client_id:
+                    pygame.draw.circle(canvas, (0,0,0), (player.x, player.y), 40, width=2)
             for projectile in game_state.projectiles:
                 projectile.draw(canvas)
             self.draw_health_state(canvas)
@@ -163,6 +214,13 @@ class Game:
             canvas.blit(image_surface, (current_x, current_y))
             current_x += 75
 
+    def maybe_die(self, client_player: Player, verb: str, killer_id: int) -> None:
+        if client_player.hp <= 0:
+            command = send_die_command(self.s, killer_id, verb, client_id=client.id)                                
+            message = f'Player {killer_id} {verb} you!'
+            self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
+                                                datetime.now(), message))
+            self.player = None        
 
     def add_announcement(self, annoucement: Announcement) -> None:
         self.announcements = [a for a in self.announcements if a.time > datetime.now() - timedelta(seconds=15)]
@@ -357,6 +415,13 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
                                              [command.data['arrow_end_x'], command.data['arrow_end_y']]])
         elif command.type == CommandType.DIE:
             player = None
+        elif command.type == CommandType.TELEPORT:
+            assert command.data is not None
+            assert player is not None
+            player.x = command.data['x']
+            player.y = command.data['y']
+            player.dest_x = None
+            player.dest_y = None
         current_time = command.time
     _move_player(player, prev_time=current_time, next_time=end_time)
 
