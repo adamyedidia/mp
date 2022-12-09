@@ -34,7 +34,7 @@ class Player():
         self.item: Item = Sword()
         self.hp = hp
         self.ammo = 5
-        self.weapon = Weapon.BOW
+        self.weapon = Weapon.DAGGER
 
         self.speed: int = 200
         self.color = color

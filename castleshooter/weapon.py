@@ -4,6 +4,9 @@ from enum import Enum
 import pygame
 
 
+DAGGER_RANGE = 100
+
+
 class Weapon(Enum):
     BOW = 'bow'
     DAGGER = 'dagger'
