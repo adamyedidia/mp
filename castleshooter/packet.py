@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
+import zlib
 import gevent
 from death_reason import DeathReason
 from projectile import ProjectileType
@@ -111,7 +112,7 @@ def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> 
     else:
         packet = Packet(client_id=client_id, payload=message)
         # print(f'Sending without retry {packet}')    
-        conn.sendall(bytes(packet.to_str(), 'utf-8'))
+        conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
 
 def send_ack(conn: Any, packet_id: int) -> None:

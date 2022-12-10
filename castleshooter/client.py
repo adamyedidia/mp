@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import zlib
 from announcement import Announcement, get_announcement_idempotency_key_for_command
 from death_reason import DeathReason, death_reason_to_verb
 from command import Command, CommandType, get_commands_by_player, commands_by_player, get_commands_by_projectile, commands_by_projectile
@@ -209,7 +210,7 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
 def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
     while True:
         global stored_data
-        raw_data = socket.recv(1048576).decode()
+        raw_data = zlib.decompress(socket.recv(1048576)).decode()
         for datum in raw_data.split(';'):
             # Sometimes packets get split by TCP or something, 
             # so if we fail to process a packet successfully, we store it and instead try processing it concatenated

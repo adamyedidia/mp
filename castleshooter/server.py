@@ -1,4 +1,5 @@
 import json
+import zlib
 from utils import SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
 from command import Command, store_command
 from settings import PORT, SERVER
@@ -117,7 +118,7 @@ def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> i
 def _handle_incoming_connection(connection: Connection, game_state: GameState) -> None:
     print('handling incoming connection!')
     while True:
-        data = connection.conn.recv(1048576).decode()
+        data = zlib.decompress(connection.conn.recv(1048576)).decode()
         game_state.handle_data_from_client(data, connection.conn)
 
 
