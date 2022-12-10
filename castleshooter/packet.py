@@ -75,7 +75,7 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
     packet_id = packet.id
     assert packet_id is not None
     # print(f'Sending {packet}')
-    conn.sendall(bytes(packet.to_str(), 'utf-8'))
+    conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
     sleep(wait_time)
 
     # We're relying on a different process to listen for acks and write to redis when one is seen
