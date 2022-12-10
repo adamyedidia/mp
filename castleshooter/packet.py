@@ -104,7 +104,7 @@ def send_with_test_lag(conn: Any, message: str, lag: float, *, client_id: Option
     sleep(lag)
     packet = Packet(client_id=client_id, payload=message)
     # print(f'Sending without retry {packet}')    
-    conn.sendall(bytes(packet.to_str(), 'utf-8'))
+    conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
 def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> None:
     if TEST_LAG:
@@ -118,7 +118,7 @@ def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> 
 def send_ack(conn: Any, packet_id: int) -> None:
     packet = Packet(id=packet_id, is_ack=True)
     # print(f'Acking {packet}')        
-    conn.sendall(bytes(packet.to_str(), 'utf-8'))    
+    conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
 
 def send_command(conn: Any, command: Command, *, client_id: int) -> Command:
