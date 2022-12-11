@@ -1,12 +1,13 @@
 from contextlib import nullcontext
 from datetime import datetime
 from decimal import Decimal
+import random
 from typing import Any, Optional
 import zlib
 import gevent
 from death_reason import DeathReason
 from projectile import ProjectileType
-from settings import TEST_LAG
+from settings import TEST_LAG, DROP_CHANCE
 from direction import Direction
 from command import Command, CommandType, store_command
 from redis_utils import redis_lock, rget, rset, rlisten
@@ -76,6 +77,8 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
     packet_id = packet.id
     assert packet_id is not None
     # print(f'Sending {packet}')
+    if DROP_CHANCE and random.random() < DROP_CHANCE:
+        return False    
     conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
     sleep(wait_time)
@@ -89,6 +92,8 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
 def send_with_retry(conn: Any, message: str, client_id: Optional[int]) -> bool:
+    if TEST_LAG:
+        sleep(TEST_LAG)
     packet_id = _generate_next_packet_id(client_id=client_id)
     packet = Packet(id=packet_id, client_id=client_id, payload=message)
     wait_times = [0.05, 0.1, 0.2, 0.4, 0.8]
@@ -109,6 +114,8 @@ def send_with_test_lag(conn: Any, message: str, lag: float, *, client_id: Option
     conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
 def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> None:
+    if DROP_CHANCE and random.random() < DROP_CHANCE:
+        return        
     if TEST_LAG:
         start_new_thread(send_with_test_lag, (conn, message, TEST_LAG), {'client_id': client_id})
     else:
