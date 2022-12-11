@@ -70,7 +70,6 @@ class GameState:
             assert payload is not None
             self.handle_payload_from_client(payload, packet)
         else:
-            print('Got here\n')
             assert payload is not None
             with redis_lock(f'handle_payload_from_client|{packet.client_id}|{packet.id}', 
                             client_id=None):
@@ -78,13 +77,10 @@ class GameState:
                                                             for_client=packet.client_id)
                 # Want to make sure not to handle the same packet twice due to a re-send, 
                 # if our ack didn't get through
-                print('Got here2\n')
                 if not rget(handled_redis_key, client_id=None):
-                    print('Got here3\n')
                     self.handle_payload_from_client(payload, packet)
                     send_ack(conn, packet_id)
                     rset(handled_redis_key, '1', client_id=None)
-                    print('Got here4\n')
                 else:
                     print(f'Ignoring {packet} because this packet has already been handled')
 
