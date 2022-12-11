@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
@@ -54,7 +55,7 @@ class Packet:
 
 
 def _generate_next_packet_id(client_id: Optional[int]) -> int:
-    with redis_lock('generate_next_packet_id_redis_lock', client_id=client_id):
+    with redis_lock('generate_next_packet_id_redis_lock', client_id=client_id) if client_id is None else nullcontext():
         next_packet_id = int(rget('last_packet_id', client_id=client_id) or '0') + 1
         rset('last_packet_id', next_packet_id, client_id=client_id)
     return next_packet_id
@@ -76,8 +77,7 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
     assert packet_id is not None
     # print(f'Sending {packet}')
     conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
-    print('sent!')
-    print('')
+
     sleep(wait_time)
 
     # We're relying on a different process to listen for acks and write to redis when one is seen
@@ -126,8 +126,7 @@ def send_ack(conn: Any, packet_id: int) -> None:
 def send_command(conn: Any, command: Command, *, client_id: int) -> Command:
     store_command(command, for_client=client_id, client_id=client_id)
     command_str = f'command|{json.dumps(command.to_json())}'
-    print(f'Sending command: {command_str}')
-    print('')
+    print(f'Sending command: {command_str}\n')
     start_new_thread(send_with_retry, (conn, f'command|{json.dumps(command.to_json())}', client_id))
 
     return command

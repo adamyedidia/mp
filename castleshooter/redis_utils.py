@@ -73,4 +73,3 @@ def redis_lock(key: str, *, client_id: Optional[int]) -> Any:
         yield
     finally:
         lock.release()
-
