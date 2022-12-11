@@ -89,7 +89,7 @@ def store_command(command: Command, *, for_client: int,
             assert command_id is not None
             if command_id in commands:
                 l = commands[command_id]
-                commands[command_id] = [c for c in l if datetime.fromtimestamp(json.loads(c)['time']) > datetime.now() - timedelta(seconds=20)]
+                commands[command_id] = [c for c in l if datetime.fromtimestamp(json.loads(c)['time']) > datetime.now() - timedelta(seconds=30)]
                 commands[command_id].append(command_str)
             else:
                 commands[command_id] = [command_str]
