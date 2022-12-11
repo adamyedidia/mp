@@ -90,7 +90,6 @@ class GameState:
 
     def handle_data_from_client(self, raw_data: str, conn: Any) -> None:
         for datum in raw_data.split(';'):
-            print(f'Received: {datum}\n')
             if datum:
                 global stored_data
                 # Sometimes packets get split by TCP or something, 
@@ -126,8 +125,9 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState) -
         try:
             data = zlib.decompress(connection.conn.recv(1048576)).decode()
         except Exception as e:
-            # print(f'Error decompressing data: {e}')
+            print(f'Error decompressing data: {e}')
             data = ''
+            sleep(0.02)            
         game_state.handle_data_from_client(data, connection.conn)
 
 
