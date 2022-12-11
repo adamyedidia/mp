@@ -90,6 +90,7 @@ class GameState:
 
     def handle_data_from_client(self, raw_data: str, conn: Any) -> None:
         for datum in raw_data.split(';'):
+            print(f'Received: {datum}\n')
             if datum:
                 global stored_data
                 # Sometimes packets get split by TCP or something, 
