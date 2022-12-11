@@ -121,7 +121,7 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState) -
         try:
             data = zlib.decompress(connection.conn.recv(1048576)).decode()
         except Exception as e:
-            print(f'Error decompressing data: {e}')
+            # print(f'Error decompressing data: {e}')
             data = ''
         game_state.handle_data_from_client(data, connection.conn)
 
