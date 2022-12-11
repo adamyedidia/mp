@@ -32,7 +32,7 @@ def threaded_client(conn):
                 conn.send(str.encode("Goodbye"))
                 break
             else:
-                print("Recieved: " + reply)
+                print("Received: " + reply)
                 arr = reply.split(":")
                 id = int(arr[0])
                 pos[id] = reply
