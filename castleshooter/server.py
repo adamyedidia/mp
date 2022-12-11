@@ -118,7 +118,11 @@ def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> i
 def _handle_incoming_connection(connection: Connection, game_state: GameState) -> None:
     print('handling incoming connection!')
     while True:
-        data = zlib.decompress(connection.conn.recv(1048576)).decode()
+        try:
+            data = zlib.decompress(connection.conn.recv(1048576)).decode()
+        except Exception as e:
+            print(f'Error decompressing data: {e}')
+            data = ''
         game_state.handle_data_from_client(data, connection.conn)
 
 

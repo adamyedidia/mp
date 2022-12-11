@@ -210,7 +210,11 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
 def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
     while True:
         global stored_data
-        raw_data = zlib.decompress(socket.recv(1048576)).decode()
+        try:
+            raw_data = zlib.decompress(socket.recv(1048576)).decode()
+        except Exception as e:
+            print(f'Error decompressing data: {e}')
+            raw_data = ''
         for datum in raw_data.split(';'):
             # Sometimes packets get split by TCP or something, 
             # so if we fail to process a packet successfully, we store it and instead try processing it concatenated
