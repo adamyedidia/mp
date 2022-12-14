@@ -1,5 +1,6 @@
 import json
 import zlib
+from team import get_team_for_client_id
 from utils import SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
 from command import Command, store_command
 from settings import PORT, SERVER
@@ -171,13 +172,14 @@ def main() -> None:
             conn, addr = s.accept()
             print('New connection!')
             new_connection_id = _get_new_connection_id(active_connections_by_id)
+            new_team = get_team_for_client_id(new_connection_id)
             connection = Connection(new_connection_id, conn, addr)
             active_connections_by_id[new_connection_id] = connection
             game_state.set_active_players(active_connections_by_id)
             
             sleep(0.01)
             print(f'A new client has connected! ID: {new_connection_id}')
-            start_new_thread(send_with_retry, (conn, f'client_id|{new_connection_id}', None))
+            start_new_thread(send_with_retry, (conn, f'client_id|{new_connection_id}|{new_team.value}', None))
             print(f'Done sending client id of {new_connection_id}!')
             sleep(0.001)
 

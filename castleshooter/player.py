@@ -3,20 +3,21 @@ from typing import Optional
 import pygame
 from pygame import Color
 import json
+from team import team_to_color
 from projectile import draw_arrow
 from projectile import ARROW_COLOR
 from direction import Direction, to_optional_direction
 from json.decoder import JSONDecodeError
 from weapon import Weapon
+from team import Team
 
 from utils import to_optional_int, draw_text_centered_on_rectangle
 
 BASE_MAX_HP = 4
 
 class Player():
-    def __init__(self, client_id: int, startx: int, starty: int, direction: Optional[Direction] = None,
+    def __init__(self, client_id: int, startx: int, starty: int, team: Team, direction: Optional[Direction] = None,
                  dest_x: Optional[int] = None, dest_y: Optional[int] = None,
-                 color: Color=Color(255, 0, 0), 
                  healthbar: Optional['HealthBar'] = None,
                  hp: int = BASE_MAX_HP,
                  arrows_puncturing: Optional[list[list[list[int]]]] = None):
@@ -28,6 +29,7 @@ class Player():
         self.direction = direction
         self.width = 50
         self.height = 50
+        self.team = team
 
         self.healthbar: HealthBar = healthbar if healthbar is not None else HealthBar()
         self.hp = hp
@@ -35,13 +37,12 @@ class Player():
         self.weapon = Weapon.DAGGER
 
         self.speed: int = 200
-        self.color = color
         self.arrows_puncturing = arrows_puncturing if arrows_puncturing is not None else []
 
-    def draw(self, g: pygame.surface.Surface):
+    def draw(self, g: pygame.surface.Surface, team: Optional[Team] = None):
         x = int(math.ceil(self.x - self.width / 2))
         y = int(math.ceil(self.y - self.height / 2))
-        pygame.draw.rect(g, self.color, (x, y, self.width, self.height), 0)
+        pygame.draw.rect(g, team_to_color(team), (x, y, self.width, self.height), 0)
         pygame.draw.rect(g, (0,0,0), (x, y, self.width, self.height), width=2)
         for arrow in self.arrows_puncturing:
             draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x, arrow[0][1] + self.y), (arrow[1][0] + self.x, arrow[1][1] + self.y))
@@ -63,6 +64,7 @@ class Player():
             'healthbar': self.healthbar.to_json(),
             'direction': self.direction.value if self.direction is not None else None,
             'arrows_puncturing': self.arrows_puncturing,
+            'team': self.team.value,
         })
 
     @classmethod
@@ -73,7 +75,8 @@ class Player():
                       dest_x=to_optional_int(d['dest_x']), dest_y=to_optional_int(d['dest_y']),
                       healthbar=HealthBar.from_json(d['healthbar']), 
                       direction=to_optional_direction(d['direction']),
-                      arrows_puncturing=d['arrows_puncturing'])
+                      arrows_puncturing=d['arrows_puncturing'],
+                      team=Team(d['team']))
 
     def copy(self) -> 'Player':
         return Player.from_json(self.to_json())

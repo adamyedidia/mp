@@ -19,6 +19,7 @@ from game import Game, GameState, game_state_snapshots, run_spontaneous_game_pro
 from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
 from time import sleep
 import pygame
+from team import Team
 
 
 game: Optional[Game] = None
@@ -34,7 +35,7 @@ def start_up_game(socket: Any) -> None:
     assert client.id is not None
     sleep(0.5)
     print('Sending the spawn command!')
-    send_spawn_command(socket, 300, 300, client_id=client.id)    
+    send_spawn_command(socket, 300, 300, client.team, client_id=client.id)    
     global game
     game = Game(750,750, client, socket)
     start_new_thread(run_spontaneous_game_processes, (game,))
@@ -43,9 +44,10 @@ def start_up_game(socket: Any) -> None:
 
 def _handle_client_id_packet(payload: str) -> bool:
     if payload.startswith('client_id|') and client.id in [None, -1]:
-        _, raw_client_id = payload.split('|')
-        print(f'setting client id to {raw_client_id}')
+        _, raw_client_id, team = payload.split('|')
+        print(f'setting client id to {raw_client_id} and team to {team}')
         client.set_id(int(raw_client_id))
+        client.set_team(Team(team))
         return True
     return False    
 
@@ -215,6 +217,7 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
         except Exception as e:
             print(f'Error decompressing data: {e}')
             raw_data = ''
+            sleep(0.02)
         for datum in raw_data.split(';'):
             # Sometimes packets get split by TCP or something, 
             # so if we fail to process a packet successfully, we store it and instead try processing it concatenated
