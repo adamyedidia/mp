@@ -5,6 +5,7 @@ import random
 from typing import Any, Optional
 import zlib
 import gevent
+from team import Team
 from death_reason import DeathReason
 from projectile import ProjectileType
 from settings import TEST_LAG, DROP_CHANCE
@@ -150,10 +151,10 @@ def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> C
                         data={'x': x_pos, 'y': y_pos}), client_id=client_id)
 
 
-def send_spawn_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> Command:
+def send_spawn_command(conn: Any, x_pos: int, y_pos: int, team: Team, *, client_id: int) -> Command:
     return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
                         type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
-                        data={'x': x_pos, 'y': y_pos}), client_id=client_id)
+                        data={'x': x_pos, 'y': y_pos, 'team': team.value}), client_id=client_id)
 
 
 def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: int) -> Command:

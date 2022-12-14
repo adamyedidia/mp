@@ -18,7 +18,6 @@ from direction import determine_direction_from_keyboard, to_optional_direction
 from command import Command, CommandType, get_commands_by_player
 
 from redis_utils import redis_lock, rget, rset
-
 from player import Player, BASE_MAX_HP
 from canvas import Canvas
 from client_utils import Client, client
@@ -34,6 +33,7 @@ from utils import MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_re
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
 import time
+from team import get_team_for_client_id, Team
 
 
 ITEM_GENERATION_RATE = 0.2
@@ -76,7 +76,7 @@ class Game:
         self.s = socket
         self.player_number = self.client.id if self.client.id is not None else -1
         self.players: dict[int, Player] = {}
-        self.player: Optional[Player] = Player(client.id, 300, 300)
+        self.player: Optional[Player] = None
         self.canvas = Canvas(self.width, self.height, "Testing...")
         self.announcements: list[Announcement] = []
         self.commands_handled: list[Command] = []
@@ -84,6 +84,7 @@ class Game:
         self.mouse_target: Optional[Player] = None
         self.items: dict[int, Item] = {}
         self.item_target: Optional[Item] = None
+        self.client_ids_to_putative_teams: dict[int, Team] = {}
 
     def run(self):
         print('Running the game!')
@@ -213,7 +214,7 @@ class Game:
             else:
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                        send_spawn_command(self.s, 300, 300, client_id=client.id)       
+                        send_spawn_command(self.s, 300, 300, client.team, client_id=client.id)       
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
@@ -226,7 +227,8 @@ class Game:
             self.canvas.draw_background()
             canvas = self.canvas.get_canvas()
             for player in game_state.players:
-                player.draw(canvas)
+                putative_player_team = player.team if player.client_id == client.id else self.client_ids_to_putative_teams.get(player.client_id)
+                player.draw(canvas, putative_player_team)
                 if target is not None and client_player is not None and player.client_id != client_player.client_id and player.client_id == target.client_id:
                     pygame.draw.circle(canvas, (0,0,0), (player.x, player.y), 40, width=2)
             for item in game_items.values():
@@ -443,7 +445,7 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             player.dest_y = command.data['y']
         elif command.type == CommandType.SPAWN:
             assert command.data is not None
-            player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'])      
+            player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'], team=Team(command.data['team']))      
         elif command.type == CommandType.TURN:
             assert player is not None
             assert command.data is not None
