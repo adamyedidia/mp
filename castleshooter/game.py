@@ -138,7 +138,8 @@ class Game:
                                                                         vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
                                     arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
                                     arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
-                                    send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, [client.id],
+                                    send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, 
+                                                                [client.id, *[client_id for client_id in self.client_ids_to_putative_teams.keys() if self.client_ids_to_putative_teams.get(client_id) == client.team]], 
                                                                 type=ProjectileType.ARROW, client_id=client.id)
                                     # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
                                     client_player.ammo -= 1
@@ -198,7 +199,7 @@ class Game:
                 min_distance = DAGGER_RANGE
                 if client_player.weapon == Weapon.DAGGER:
                     for possible_target in game_state.players:
-                        if possible_target.client_id != client_player.client_id:
+                        if possible_target.client_id != client_player.client_id and self.client_ids_to_putative_teams.get(possible_target.client_id) != client.team:
                             distance = sqrt((possible_target.x - client_player.x)**2 + (possible_target.y - client_player.y)**2)
                             if distance < min_distance:
                                 self.target = possible_target
