@@ -11,11 +11,11 @@ class Team(Enum):
 
 def team_to_color(team: Optional[Team]) -> tuple[int, int, int]:
     if team == Team.BLUE:
-        return (0, 0, 255)
+        return (128, 128, 255)
     elif team == Team.RED:
-        return (255, 0, 0)
+        return (255, 64, 64)
     else:
-        return (128, 128, 128)
+        return (192, 192, 192)
 
 
 def get_team_for_client_id(client_id: int) -> Team:
@@ -23,3 +23,19 @@ def get_team_for_client_id(client_id: int) -> Team:
         return Team.RED
     else:
         return Team.BLUE
+
+
+def flip_team(team: Team) -> Team:
+    if team == Team.RED:
+        return Team.BLUE
+    else:
+        return Team.RED
+
+
+def rotate_team(current_team: Optional[Team], my_team: Team) -> Optional[Team]:
+    if current_team is None:
+        return my_team
+    elif current_team == my_team:
+        return flip_team(current_team)
+    else:
+        return None
