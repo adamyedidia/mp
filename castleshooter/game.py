@@ -33,7 +33,7 @@ from utils import MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_re
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
 import time
-from team import get_team_for_client_id, Team
+from team import Team, team_to_color, rotate_team
 
 
 ITEM_GENERATION_RATE = 0.2
@@ -114,6 +114,7 @@ class Game:
 
             if client_player is not None:
                 for event in pygame.event.get():
+                    pressed = pygame.key.get_pressed()
                     if event.type == pygame.QUIT:
                         run = False
 
@@ -127,7 +128,6 @@ class Game:
                             direction = determine_direction_from_keyboard()
                             send_turn_command(self.s, direction, client_id=client.id)
                         elif event.key == pygame.K_SPACE:
-                            pressed = pygame.key.get_pressed()
                             if pressed[pygame.K_SPACE]:
                                 if client_player.weapon == Weapon.BOW and client_player.ammo > 0:
                                     mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -150,7 +150,7 @@ class Game:
                                     client_player.weapon = None
 
                         elif event.key == pygame.K_e:
-                            if self.item_target is not None:
+                            if self.item_target is not None and pressed[pygame.K_e]:
                                 del self.items[self.item_target.id]
                                 if self.item_target.category == ItemCategory.WEAPON:
                                     client_player.weapon = Weapon(self.item_target.type.value)
@@ -159,7 +159,6 @@ class Game:
                                 self.item_target = None
 
                         elif event.key in [*SHIFT_KEYS, *NUMBER_KEYS.values()]:
-                            pressed = pygame.key.get_pressed()
                             shift_pressed = False
                             number_pressed: Optional[int] = None
                             for key in SHIFT_KEYS:
@@ -174,6 +173,8 @@ class Game:
                                     if pressed_target.id == pressed_target_id and sqrt((player.x - client_player.x)**2 + (player.y - client_player.y)**2) < DAGGER_RANGE:
                                         send_lose_hp_command(self.s, client_player.client_id, pressed_target_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
                                         send_teleport_command(self.s, pressed_target.x, pressed_target.y, client_id=client.id)
+                            elif not shift_pressed and number_pressed is not None and client.team is not None:
+                                self.client_ids_to_putative_teams[number_pressed] = rotate_team(self.client_ids_to_putative_teams.get(number_pressed), client.team)
 
                         elif event.key == pygame.K_ESCAPE:
                             run = False
@@ -248,6 +249,7 @@ class Game:
             self.draw_announcements(canvas)
             self.draw_big_text(canvas)
             self.draw_weapon_and_ammo(canvas)
+            self.draw_client_ids_to_putative_teams(canvas)
             self.canvas.update()
 
         pygame.quit()
@@ -324,6 +326,18 @@ class Game:
                 for _ in range(client_player.ammo):
                     current_x -= 30
                     draw_arrow(canvas, ARROW_COLOR, (current_x, arrow_bottom), (current_x, arrow_top))
+
+    def draw_client_ids_to_putative_teams(self, canvas: Any) -> None:
+        current_x = self.width - 70
+        current_y = 70
+
+        for client_id in range(1, 9):
+            if client_id == client.id:
+                continue
+            pygame.draw.circle(canvas, (0,0,0), (current_x, current_y), 25, width=2)
+            pygame.draw.circle(canvas, team_to_color(self.client_ids_to_putative_teams.get(client_id)), (current_x, current_y), 25)
+            draw_text_centered_on_rectangle(canvas, str(client_id), current_x, current_y, 0, 0, 25)        
+            current_y += 60    
 
 
 class GameState:
