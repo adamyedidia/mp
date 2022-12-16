@@ -33,6 +33,7 @@ def get_game() -> Optional[Game]:
 def start_up_game(socket: Any) -> None:
     print('starting up game!')
     assert client.id is not None
+    assert client.team is not None
     sleep(0.5)
     print('Sending the spawn command!')
     send_spawn_command(socket, 300, 300, client.team, client_id=client.id)    
