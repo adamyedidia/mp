@@ -8,6 +8,7 @@ from typing import Any, Optional
 import pygame
 from pygame import Color
 from announcement import Announcement, get_announcement_idempotency_key_for_command
+from flashlight_utils import FLASHLIGHT_COLOR, get_unit_vector_from_player_to_mouse, get_flashligh_triangle, point_in_triangle
 from weapon import Weapon, weapon_to_pygame_image, DAGGER_RANGE
 from death_reason import DeathReason, death_reason_to_verb
 from command import get_commands_by_projectile
@@ -61,9 +62,9 @@ def generate_item(game: 'Game') -> None:
     next_item_id = generate_next_item_id(client_id=client.id)
     category = ItemCategory.WEAPON
     random_number = random.random()
-    if random_number < 0.5:
+    if random_number < 0.33:
         type = ItemType.FLASHLIGHT
-    elif random_number < .75:
+    elif random_number < .67:
         type = ItemType.BOW
     else:
         type = ItemType.DAGGER
@@ -136,11 +137,8 @@ class Game:
                             if pressed[pygame.K_SPACE]:
                                 if client_player.weapon == Weapon.BOW and client_player.ammo > 0:
                                     mouse_x, mouse_y = pygame.mouse.get_pos()
+                                    unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x, client_player.y, mouse_x, mouse_y)
                                     arrow_distance = 400
-                                    vector_from_player_to_mouse = (mouse_x - client_player.x, mouse_y - client_player.y)
-                                    vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
-                                    unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
-                                                                        vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
                                     arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
                                     arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
                                     send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, 
@@ -155,6 +153,13 @@ class Game:
                                     send_teleport_command(self.s, target.x, target.y, client_id=client.id)
                                     client_player.weapon = None
                                 elif client_player.weapon == Weapon.FLASHLIGHT:
+                                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                                    triangle = get_flashligh_triangle(client_player.x, client_player.y, mouse_x, mouse_y)
+                                    
+                                    for player in game_state.players:
+                                        if point_in_triangle((player.x, player.y), triangle):
+                                            self.client_ids_to_putative_teams[player.client_id] = player.team
+
                                     client_player.weapon = None
 
                         elif event.key == pygame.K_e:
@@ -234,28 +239,17 @@ class Game:
             # Update Canvas
             if client_player is not None and (client_player.weapon == Weapon.BOW or client_player.weapon == Weapon.FLASHLIGHT):
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-                vector_from_player_to_mouse = (mouse_x - client_player.x, mouse_y - client_player.y)
-                vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
-                unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
-                                                    vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
                 
                 if client_player.weapon == Weapon.BOW:
+                    unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x, client_player.y, mouse_x, mouse_y)
                     arrow_size = 50
                     arrow_x = unit_vector_from_player_to_mouse[0] * arrow_size + client_player.x
                     arrow_y = unit_vector_from_player_to_mouse[1] * arrow_size + client_player.y
                     draw_arrow(canvas, ARROW_COLOR, (client_player.x, client_player.y), (arrow_x, arrow_y))
             
                 elif client_player.weapon == Weapon.FLASHLIGHT:
-                    flashlight_range = 200
-                    flashlight_width = 50
-
-                    perp_unit_vector = (unit_vector_from_player_to_mouse[1], -unit_vector_from_player_to_mouse[0])
-
-                    point_1 = (client_player.x, client_player.y)
-                    point_2 = [point_1[i] + flashlight_range * unit_vector_from_player_to_mouse[i] + flashlight_width * perp_unit_vector[i] for i in range(2)]
-                    point_3 = [point_1[i] + flashlight_range * unit_vector_from_player_to_mouse[i] - flashlight_width * perp_unit_vector[i]
-                               for i in range(2)]
-                    pygame.draw.polygon(canvas, (255, 255, 0), [point_1, point_2, point_3], width=0)
+                    triangle = get_flashligh_triangle(client_player.x, client_player.y, mouse_x, mouse_y)
+                    pygame.draw.polygon(canvas, FLASHLIGHT_COLOR, triangle, width=0)
 
             for player in game_state.players:
                 putative_player_team = player.team if player.client_id == client.id else self.client_ids_to_putative_teams.get(player.client_id)
