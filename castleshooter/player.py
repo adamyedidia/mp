@@ -1,5 +1,5 @@
 import math
-from typing import Optional
+from typing import Optional, Union
 import pygame
 from pygame import Color
 import json
@@ -54,7 +54,7 @@ class Player():
         self.y = max(0, self.y)
         self.y = min(h-self.height, self.y)
 
-    def to_json(self):
+    def to_json(self) -> str:
         return json.dumps({
             'client_id': self.client_id,
             'x': self.x,
@@ -68,9 +68,10 @@ class Player():
         })
 
     @classmethod
-    def from_json(cls, d: dict) -> 'Player':
+    def from_json(cls, d: Union[dict, str]) -> 'Player':
         if isinstance(d, str):
             d = json.loads(d)
+        assert isinstance(d, dict)
         return Player(client_id=d['client_id'], startx=d['x'], starty=d['y'], 
                       dest_x=to_optional_int(d['dest_x']), dest_y=to_optional_int(d['dest_y']),
                       healthbar=HealthBar.from_json(d['healthbar']), 

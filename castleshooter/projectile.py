@@ -2,7 +2,7 @@ from enum import Enum
 import json
 import math
 import random
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 import pygame
 from direction import to_optional_direction
 from utils import to_optional_int
@@ -69,7 +69,7 @@ class Projectile:
         return [int(end[0] - unit_vector_from_source_to_dest[0] * arrow_length), 
                 int(end[1] - unit_vector_from_source_to_dest[1] * arrow_length)]
 
-    def to_json(self):
+    def to_json(self) -> str:
         return json.dumps({
             'id': self.id,
             'x': self.x,
@@ -85,9 +85,10 @@ class Projectile:
         })
 
     @classmethod
-    def from_json(cls, d: dict) -> 'Projectile':
+    def from_json(cls, d: Union[dict, str]) -> 'Projectile':
         if isinstance(d, str):
             d = json.loads(d)
+        assert isinstance(d, dict)    
         return Projectile(id=d['id'], startx=d['source_x'], starty=d['source_y'], type=ProjectileType(d['type']),
                           player_id=d['player_id'],
                           dest_x=int(d['dest_x']), dest_y=int(d['dest_y']),
