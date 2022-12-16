@@ -112,6 +112,8 @@ class Game:
                         self.player = player
 
             client_player = self.player
+            self.canvas.draw_background()
+            canvas = self.canvas.get_canvas()
             target = self.target
             game_items = self.items.copy()
 
@@ -231,9 +233,17 @@ class Game:
             #         self.send_data()
 
             # Update Canvas
-            client_player = self.player
-            self.canvas.draw_background()
-            canvas = self.canvas.get_canvas()
+            if client_player is not None and (client_player.weapon == Weapon.BOW or client_player.weapon == Weapon.FLASHLIGHT):
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                arrow_size = 50
+                vector_from_player_to_mouse = (mouse_x - client_player.x, mouse_y - client_player.y)
+                vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
+                unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
+                                                    vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
+                arrow_x = unit_vector_from_player_to_mouse[0] * arrow_size + client_player.x
+                arrow_y = unit_vector_from_player_to_mouse[1] * arrow_size + client_player.y
+                draw_arrow(canvas, ARROW_COLOR, (client_player.x, client_player.y), (arrow_x, arrow_y))
+            
             for player in game_state.players:
                 putative_player_team = player.team if player.client_id == client.id else self.client_ids_to_putative_teams.get(player.client_id)
                 player.draw(canvas, putative_player_team)
