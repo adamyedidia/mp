@@ -28,10 +28,10 @@ class Item:
         self.category = category
         self.type = type
 
-    def draw(self, canvas: Any) -> None:
+    def draw(self, canvas: Any, x_offset: int, y_offset: int) -> None:
         if self.category == ItemCategory.WEAPON:
             image_surface = pygame.transform.scale(weapon_to_pygame_image(Weapon(self.type.value)), (50, 50)).convert_alpha()
-            canvas.blit(image_surface, (self.x - 25, self.y - 25))        
+            canvas.blit(image_surface, (self.x - x_offset - 25, self.y - y_offset - 25))        
 
 
 NEXT_ITEM_ID_REDIS_KEY = 'next_item_id'

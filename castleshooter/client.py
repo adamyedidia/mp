@@ -38,7 +38,7 @@ def start_up_game(socket: Any) -> None:
     print('Sending the spawn command!')
     send_spawn_command(socket, 300, 300, client.team, client_id=client.id)    
     global game
-    game = Game(750,750, client, socket)
+    game = Game(750, 750, 3000, 3000, client, socket)
     start_new_thread(run_spontaneous_game_processes, (game,))
     game.run()    
 

@@ -37,7 +37,7 @@ import time
 from team import Team, team_to_color, rotate_team
 
 
-ITEM_GENERATION_RATE = 0.2
+ITEM_GENERATION_RATE = 2.0
 
 SHIFT_KEYS = [pygame.K_RSHIFT, pygame.K_LSHIFT]
 NUMBER_KEYS = {1: pygame.K_1, 
@@ -68,14 +68,16 @@ def generate_item(game: 'Game') -> None:
         type = ItemType.BOW
     else:
         type = ItemType.DAGGER
-    game.items[next_item_id] = Item(next_item_id, random.randint(1, game.width-1), random.randint(1, game.width-1),
+    game.items[next_item_id] = Item(next_item_id, random.randint(1, game.game_height-1), random.randint(1, game.game_width-1),
                                     category, type)
 
 
 class Game:
-    def __init__(self, w: int, h: int, client: Client, socket: socket):
+    def __init__(self, w: int, h: int, game_width: int, game_height: int, client: Client, socket: socket):
         self.width = w
         self.height = h
+        self.game_width = game_width
+        self.game_height = game_height
         self.client = client
         self.s = socket
         self.player_number = self.client.id if self.client.id is not None else -1
@@ -237,37 +239,51 @@ class Game:
             #         self.send_data()
 
             # Update Canvas
+            x_offset: Optional[int] = None
+            y_offset: Optional[int] = None
+
+            if client_player is not None:
+                x_offset = int(client_player.x - self.width / 2)
+                y_offset = int(client_player.y - self.height / 2)
+
             if client_player is not None and (client_player.weapon == Weapon.BOW or client_player.weapon == Weapon.FLASHLIGHT):
+                assert x_offset
+                assert y_offset
                 mouse_x, mouse_y = pygame.mouse.get_pos()
+                vector_from_player_to_mouse = (mouse_x - client_player.x + x_offset, mouse_y - client_player.y + y_offset)
+                vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
+                unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
+                                                    vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
                 
                 if client_player.weapon == Weapon.BOW:
                     unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x, client_player.y, mouse_x, mouse_y)
                     arrow_size = 50
-                    arrow_x = unit_vector_from_player_to_mouse[0] * arrow_size + client_player.x
-                    arrow_y = unit_vector_from_player_to_mouse[1] * arrow_size + client_player.y
-                    draw_arrow(canvas, ARROW_COLOR, (client_player.x, client_player.y), (arrow_x, arrow_y))
+                    arrow_x = unit_vector_from_player_to_mouse[0] * arrow_size + client_player.x - x_offset
+                    arrow_y = unit_vector_from_player_to_mouse[1] * arrow_size + client_player.y - y_offset
+                    draw_arrow(canvas, ARROW_COLOR, (client_player.x - x_offset, client_player.y - y_offset), (arrow_x, arrow_y))
             
                 elif client_player.weapon == Weapon.FLASHLIGHT:
-                    triangle = get_flashligh_triangle(client_player.x, client_player.y, mouse_x, mouse_y)
+                    triangle = get_flashligh_triangle(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
                     pygame.draw.polygon(canvas, FLASHLIGHT_COLOR, triangle, width=0)
 
-            for player in game_state.players:
-                putative_player_team = player.team if player.client_id == client.id else self.client_ids_to_putative_teams.get(player.client_id)
-                player.draw(canvas, putative_player_team)
-                if target is not None and client_player is not None and player.client_id != client_player.client_id and player.client_id == target.client_id:
-                    pygame.draw.circle(canvas, (0,0,0), (player.x, player.y), 40, width=2)
-            for item in game_items.values():
-                item.draw(canvas)
+            if client_player is not None and x_offset is not None and y_offset is not None:
+                for player in game_state.players:
+                    putative_player_team = player.team if player.client_id == client.id else self.client_ids_to_putative_teams.get(player.client_id)
+                    player.draw(canvas, x_offset, y_offset, putative_player_team)
+                    if target is not None and client_player is not None and player.client_id != client_player.client_id and player.client_id == target.client_id:
+                        pygame.draw.circle(canvas, (0,0,0), (player.x - x_offset, player.y - y_offset), 40, width=2)
+                for item in game_items.values():
+                    item.draw(canvas, x_offset, y_offset)
 
-            if self.item_target is not None:
-                if self.item_target.category == ItemCategory.WEAPON and client_player is not None and client_player.weapon is not None:
-                    color = (255, 0, 0)
-                else:
-                    color = (0, 0, 0)
-                pygame.draw.circle(canvas, color, (self.item_target.x, self.item_target.y), 40, width = 2)
+                if self.item_target is not None:
+                    if self.item_target.category == ItemCategory.WEAPON and client_player is not None and client_player.weapon is not None:
+                        color = (255, 0, 0)
+                    else:
+                        color = (0, 0, 0)
+                    pygame.draw.circle(canvas, color, (self.item_target.x - x_offset, self.item_target.y - y_offset), 40, width = 2)
 
-            for projectile in game_state.projectiles:
-                projectile.draw(canvas)
+                for projectile in game_state.projectiles:
+                    projectile.draw(canvas, x_offset, y_offset)
 
             self.draw_health_state(canvas)
             self.draw_announcements(canvas)
