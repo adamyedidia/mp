@@ -155,7 +155,6 @@ class Game:
                                     send_teleport_command(self.s, target.x, target.y, client_id=client.id)
                                     client_player.weapon = None
                                 elif client_player.weapon == Weapon.FLASHLIGHT:
-                                    # TODO
                                     client_player.weapon = None
 
                         elif event.key == pygame.K_e:
@@ -235,15 +234,29 @@ class Game:
             # Update Canvas
             if client_player is not None and (client_player.weapon == Weapon.BOW or client_player.weapon == Weapon.FLASHLIGHT):
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-                arrow_size = 50
                 vector_from_player_to_mouse = (mouse_x - client_player.x, mouse_y - client_player.y)
                 vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
                 unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
                                                     vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
-                arrow_x = unit_vector_from_player_to_mouse[0] * arrow_size + client_player.x
-                arrow_y = unit_vector_from_player_to_mouse[1] * arrow_size + client_player.y
-                draw_arrow(canvas, ARROW_COLOR, (client_player.x, client_player.y), (arrow_x, arrow_y))
+                
+                if client_player.weapon == Weapon.BOW:
+                    arrow_size = 50
+                    arrow_x = unit_vector_from_player_to_mouse[0] * arrow_size + client_player.x
+                    arrow_y = unit_vector_from_player_to_mouse[1] * arrow_size + client_player.y
+                    draw_arrow(canvas, ARROW_COLOR, (client_player.x, client_player.y), (arrow_x, arrow_y))
             
+                elif client_player.weapon == Weapon.FLASHLIGHT:
+                    flashlight_range = 200
+                    flashlight_width = 50
+
+                    perp_unit_vector = (unit_vector_from_player_to_mouse[1], -unit_vector_from_player_to_mouse[0])
+
+                    point_1 = (client_player.x, client_player.y)
+                    point_2 = [point_1[i] + flashlight_range * unit_vector_from_player_to_mouse[i] + flashlight_width * perp_unit_vector[i] for i in range(2)]
+                    point_3 = [point_1[i] + flashlight_range * unit_vector_from_player_to_mouse[i] - flashlight_width * perp_unit_vector[i]
+                               for i in range(2)]
+                    pygame.draw.polygon(canvas, (255, 255, 0), [point_1, point_2, point_3], width=0)
+
             for player in game_state.players:
                 putative_player_team = player.team if player.client_id == client.id else self.client_ids_to_putative_teams.get(player.client_id)
                 player.draw(canvas, putative_player_team)
