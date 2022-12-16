@@ -119,8 +119,12 @@ class Game:
             canvas = self.canvas.get_canvas()
             target = self.target
             game_items = self.items.copy()
+            x_offset: Optional[int] = None
+            y_offset: Optional[int] = None
 
             if client_player is not None:
+                x_offset = int(client_player.x - self.width / 2)
+                y_offset = int(client_player.y - self.height / 2)                
                 for event in pygame.event.get():
                     pressed = pygame.key.get_pressed()
                     if event.type == pygame.QUIT:
@@ -139,7 +143,7 @@ class Game:
                             if pressed[pygame.K_SPACE]:
                                 if client_player.weapon == Weapon.BOW and client_player.ammo > 0:
                                     mouse_x, mouse_y = pygame.mouse.get_pos()
-                                    unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x, client_player.y, mouse_x, mouse_y)
+                                    unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
                                     arrow_distance = 400
                                     arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
                                     arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
@@ -239,16 +243,13 @@ class Game:
             #         self.send_data()
 
             # Update Canvas
-            x_offset: Optional[int] = None
-            y_offset: Optional[int] = None
-
             if client_player is not None:
                 x_offset = int(client_player.x - self.width / 2)
                 y_offset = int(client_player.y - self.height / 2)
 
             if client_player is not None and (client_player.weapon == Weapon.BOW or client_player.weapon == Weapon.FLASHLIGHT):
-                assert x_offset
-                assert y_offset
+                x_offset = int(client_player.x - self.width / 2)
+                y_offset = int(client_player.y - self.height / 2)
                 mouse_x, mouse_y = pygame.mouse.get_pos()
                 vector_from_player_to_mouse = (mouse_x - client_player.x + x_offset, mouse_y - client_player.y + y_offset)
                 vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
@@ -256,7 +257,7 @@ class Game:
                                                     vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
                 
                 if client_player.weapon == Weapon.BOW:
-                    unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x, client_player.y, mouse_x, mouse_y)
+                    unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
                     arrow_size = 50
                     arrow_x = unit_vector_from_player_to_mouse[0] * arrow_size + client_player.x - x_offset
                     arrow_y = unit_vector_from_player_to_mouse[1] * arrow_size + client_player.y - y_offset
