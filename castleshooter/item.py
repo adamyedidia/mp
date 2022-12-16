@@ -17,6 +17,7 @@ class ItemCategory(Enum):
 class ItemType(Enum):
     BOW = 'bow'
     DAGGER = 'dagger'
+    FLASHLIGHT = 'flashlight'
 
 
 class Item:
