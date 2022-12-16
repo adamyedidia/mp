@@ -60,7 +60,10 @@ def run_spontaneous_game_processes(game: 'Game') -> None:
 def generate_item(game: 'Game') -> None:
     next_item_id = generate_next_item_id(client_id=client.id)
     category = ItemCategory.WEAPON
-    if random.random() < 0.5:
+    random_number = random.random()
+    if random_number < 0.5:
+        type = ItemType.FLASHLIGHT
+    elif random_number < .75:
         type = ItemType.BOW
     else:
         type = ItemType.DAGGER
@@ -148,6 +151,9 @@ class Game:
                                 elif client_player.weapon == Weapon.DAGGER and target is not None:
                                     send_lose_hp_command(self.s, client_player.client_id, target.client_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
                                     send_teleport_command(self.s, target.x, target.y, client_id=client.id)
+                                    client_player.weapon = None
+                                elif client_player.weapon == Weapon.FLASHLIGHT:
+                                    # TODO
                                     client_player.weapon = None
 
                         elif event.key == pygame.K_e:
