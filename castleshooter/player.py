@@ -39,13 +39,13 @@ class Player():
         self.speed: int = 200
         self.arrows_puncturing = arrows_puncturing if arrows_puncturing is not None else []
 
-    def draw(self, g: pygame.surface.Surface, team: Optional[Team] = None):
-        x = int(math.ceil(self.x - self.width / 2))
-        y = int(math.ceil(self.y - self.height / 2))
+    def draw(self, g: pygame.surface.Surface, x_offset: int, y_offset: int, team: Optional[Team] = None):
+        x = int(math.ceil(self.x - x_offset - self.width / 2))
+        y = int(math.ceil(self.y - y_offset - self.height / 2))
         pygame.draw.rect(g, team_to_color(team), (x, y, self.width, self.height), 0)
         pygame.draw.rect(g, (0,0,0), (x, y, self.width, self.height), width=2)
         for arrow in self.arrows_puncturing:
-            draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x, arrow[0][1] + self.y), (arrow[1][0] + self.x, arrow[1][1] + self.y))
+            draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x - x_offset, arrow[0][1] + self.y - y_offset), (arrow[1][0] + self.x - x_offset, arrow[1][1] + self.y - y_offset))
         draw_text_centered_on_rectangle(g, str(self.client_id), x, y, self.width, self.height, 35)
 
     def make_valid_position(self, w: int, h: int) -> None:

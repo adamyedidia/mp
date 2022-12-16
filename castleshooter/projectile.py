@@ -46,11 +46,11 @@ class Projectile:
         # client_ids of friendly players
         self.friends = friends if friends is not None else []
 
-    def draw(self, g: pygame.surface.Surface):
+    def draw(self, g: pygame.surface.Surface, x_offset: int, y_offset: int):
         if self.type == ProjectileType.ARROW:
             color = ARROW_COLOR
             arrow_length = ARROW_LENGTH
-            end = (self.x, self.y)
+            end = (self.x - x_offset, self.y - y_offset)
             vector_from_source_to_dest = (self.dest_x - self.source_x, self.dest_y - self.source_y)
             vector_from_source_to_dest_mag = math.sqrt(vector_from_source_to_dest[0] ** 2 + vector_from_source_to_dest[1] ** 2)
             unit_vector_from_source_to_dest = (vector_from_source_to_dest[0] / vector_from_source_to_dest_mag,
