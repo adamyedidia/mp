@@ -291,6 +291,10 @@ class Game:
             self.draw_big_text(canvas)
             self.draw_weapon_and_ammo(canvas)
             self.draw_client_ids_to_putative_teams(canvas)
+            if client_player is not None:
+                x_offset = int(client_player.x - self.width / 2)
+                y_offset = int(client_player.y - self.height / 2)
+                self.draw_edges_of_map(canvas, x_offset, y_offset)
             self.canvas.update()
 
         pygame.quit()
@@ -379,6 +383,12 @@ class Game:
             pygame.draw.circle(canvas, team_to_color(self.client_ids_to_putative_teams.get(client_id)), (current_x, current_y), 25)
             draw_text_centered_on_rectangle(canvas, str(client_id), current_x, current_y, 0, 0, 25)        
             current_y += 60    
+
+    def draw_edges_of_map(self, canvas: Any, x_offset: int, y_offset: int) -> None:
+        pygame.draw.line(canvas, (0,0,0), (-x_offset, -y_offset), (self.game_width-x_offset, -y_offset), width=3)
+        pygame.draw.line(canvas, (0,0,0), (-x_offset, -y_offset), (-x_offset, self.game_height-y_offset), width=3)
+        pygame.draw.line(canvas, (0,0,0), (self.game_width-x_offset, -y_offset), (self.game_width-x_offset, self.game_height-y_offset), width=3)
+        pygame.draw.line(canvas, (0,0,0), (-x_offset, self.game_height-y_offset), (self.game_width-x_offset, self.game_height-y_offset), width=3)
 
 
 class GameState:
