@@ -10,7 +10,7 @@ def get_unit_vector_from_player_to_mouse(player_x: int, player_y: int, mouse_x: 
     return unit_vector_from_player_to_mouse
 
 
-def get_flashligh_triangle(player_x: int, player_y: int, mouse_x: int, mouse_y: int):
+def get_flashlight_triangle(player_x: int, player_y: int, mouse_x: int, mouse_y: int):
     flashlight_range = 200
     flashlight_width = 50
     

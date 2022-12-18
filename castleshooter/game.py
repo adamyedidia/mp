@@ -9,7 +9,7 @@ import pygame
 from pygame import Color
 from announcement import Announcement, get_announcement_idempotency_key_for_command
 from score_utils import draw_score_centered_on_rectangle
-from flashlight_utils import FLASHLIGHT_COLOR, get_unit_vector_from_player_to_mouse, get_flashligh_triangle, point_in_triangle
+from flashlight_utils import FLASHLIGHT_COLOR, get_unit_vector_from_player_to_mouse, get_flashlight_triangle, point_in_triangle
 from weapon import Weapon, weapon_to_pygame_image, DAGGER_RANGE
 from death_reason import DeathReason, death_reason_to_verb
 from command import get_commands_by_projectile
@@ -180,7 +180,7 @@ class Game:
                                     client_player.weapon = None
                                 elif client_player.weapon == Weapon.FLASHLIGHT:
                                     mouse_x, mouse_y = pygame.mouse.get_pos()
-                                    triangle = get_flashligh_triangle(client_player.x, client_player.y, mouse_x, mouse_y)
+                                    triangle = get_flashlight_triangle(client_player.x, client_player.y, mouse_x + x_offset, mouse_y + y_offset)
                                     
                                     for player in game_state.players:
                                         if point_in_triangle((player.x, player.y), triangle):
