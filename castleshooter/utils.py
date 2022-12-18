@@ -27,13 +27,32 @@ def remove_nones(d: dict) -> dict:
     return {key: value for key, value in d.items() if value is not None}
 
 
-def draw_text_centered_on_rectangle(g: pygame.surface.Surface, message: str, x: int, y: int, width: int, height: int, font_size: int) -> None:
+def draw_3_texts_centered_on_rectangle_inner(g: pygame.surface.Surface, text1: Any, text2: Any, text3: Any, x: int, y: int, width: int, height: int) -> None:
+    text1_rect = text1.get_rect()
+    text2_rect = text2.get_rect()
+    text3_rect = text3.get_rect()
+    rectangle_center = (x + width/2, y + height/2)
+    combined_width = text1_rect.width + text2_rect.width + text3_rect.width
+    g.blit(text1, (int(rectangle_center[0] - combined_width/2), int(rectangle_center[1] - text1_rect.height/2)))
+    g.blit(text2, (int(rectangle_center[0] - combined_width/2 + text1_rect.width), int(rectangle_center[1] - text1_rect.height/2)))
+    g.blit(text2, (int(rectangle_center[0] - combined_width/2 + text1_rect.width + text2_rect.width), int(rectangle_center[1] - text1_rect.height/2)))
+
+
+def draw_score_centered_on_rectangle(g: pygame.surface.Surface, red_points: int, blue_points: int, x: int, y: int, width: int, height: int, font_size: int) -> None:
     font = pygame.font.SysFont('comicsans', font_size)
-    text = font.render(message, True, (0,0,0))
+    text = font.render(str(red_points), True, (0,0,0))
+
+
+def draw_text_centered_on_rectangle_inner(g: pygame.surface.Surface, text: Any, x: int, y: int, width: int, height: int) -> None:
     text_rect = text.get_rect()
     rectangle_center = (x + width/2, y + height/2)
     g.blit(text, (int(rectangle_center[0] - text_rect.width/2), int(rectangle_center[1] - text_rect.height/2)))
-    # pygame.draw.rect(g, self.color, (int(math.ceil(self.x - self.width / 2)), int(math.ceil(self.y - self.height / 2)), self.width, self.height), 0)
+
+
+def draw_text_centered_on_rectangle(g: pygame.surface.Surface, message: str, x: int, y: int, width: int, height: int, font_size: int) -> None:
+    font = pygame.font.SysFont('comicsans', font_size)
+    text = font.render(message, True, (0,0,0))
+    draw_text_centered_on_rectangle_inner(g, text, x, y, width, height)
 
 
 def clamp(lower, x, upper):

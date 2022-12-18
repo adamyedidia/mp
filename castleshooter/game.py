@@ -39,6 +39,7 @@ from time import sleep
 import time
 from team import Team, team_to_color, rotate_team
 from garb import Garb, garb_to_pygame_image, garb_max_age
+from score import score
 
 
 ITEM_GENERATION_RATE = 2.0
@@ -107,6 +108,7 @@ class Game:
         self.items: dict[int, Item] = {}
         self.item_target: Optional[Item] = None
         self.client_ids_to_putative_teams: dict[int, Team] = {}
+        self.client_ids_to_actual_teams: dict[int, Team] = {}
 
     def run(self):
         print('Running the game!')
@@ -329,9 +331,12 @@ class Game:
                     elif old_garb == Garb.ARMOR:
                         client_player.hp -= 1
 
+            delayed_score = score.get()
+            actual_score = score.get(actual=True)
+
             self.draw_health_state(canvas)
             self.draw_announcements(canvas)
-            self.draw_big_text(canvas)
+            self.draw_big_text(canvas, actual_score)
             self.draw_weapon_and_ammo(canvas)
             self.draw_client_ids_to_putative_teams(canvas)
             self.draw_garb(canvas)
@@ -393,7 +398,7 @@ class Game:
             canvas.blit(text, (current_x, current_y))
             current_y += 25
 
-    def draw_big_text(self, canvas: Any) -> None:
+    def draw_big_text(self, canvas: Any, actual_score: tuple[int, int]) -> None:
         if self.player is None:
             draw_text_centered_on_rectangle(canvas, 'You died. Press enter to respawn.', 0, 0, self.width, self.height, 35)
             # font = pygame.font.SysFont("comicsans", 35)
