@@ -16,10 +16,11 @@ from packet import (
 import json
 from json.decoder import JSONDecodeError
 from game import Game, GameState, game_state_snapshots, run_spontaneous_game_processes
-from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF
+from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF, MAX_SCORE
 from time import sleep
 import pygame
-from team import Team
+from team import Team, flip_team
+from score import score
 
 
 game: Optional[Game] = None
@@ -91,6 +92,29 @@ def handle_hp_loss_for_commands(commands_for_player: list[Command]) -> None:
                         game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
 
 
+def handle_client_changes_for_all_commands(commands_by_player: dict[int, list[str]]) -> None:
+    game = get_game()
+    if game is not None:
+        for client_id, raw_commands in commands_by_player.items():
+            for raw_command in raw_commands:
+                command = Command.from_json(json.loads(raw_command))
+                if command.id not in [c.id for c in game.commands_handled]:
+                    print(f'New command detected: {command.to_json()}\n')
+                    if command.type == CommandType.DIE:
+                        global score
+                        actual_score = score.get()
+                        actual_red_score, actual_blue_score = actual_score
+                        game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
+                        print(f'Not game over: {not game_over}')
+                        if not game_over:                    
+                            team_to_gain_point = flip_team(game.client_ids_to_actual_teams[client_id])
+                            print(f'incrementing {team_to_gain_point}\n')                            
+                            score.increment(team_to_gain_point, max_delay_seconds=10)
+
+                            game.commands_handled.append(command)
+                            game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
+
+
 def _handle_payload_from_server(payload: str) -> None:
     if payload.startswith('client_id|') and client.id is None:
         pass
@@ -127,6 +151,7 @@ def _handle_payload_from_server(payload: str) -> None:
                 commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]
                 handle_announcements_for_commands(commands_for_player)
                 handle_hp_loss_for_commands(commands_for_player)
+                handle_client_changes_for_all_commands(commands_by_player)
 
             for player_id, raw_commands_from_server in raw_commands_by_player_from_server.items():
                 if player_id in player_ids_handled:
@@ -138,7 +163,8 @@ def _handle_payload_from_server(payload: str) -> None:
                                        if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
                 commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]     
                 handle_announcements_for_commands(commands_for_player)   
-                handle_hp_loss_for_commands(commands_for_player)                                     
+                handle_hp_loss_for_commands(commands_for_player)
+                handle_client_changes_for_all_commands(commands_by_player)                                     
 
         if 'commands_by_projectile' in key:
             raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id)
