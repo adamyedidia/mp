@@ -152,7 +152,7 @@ class Game:
 
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         assert client.id is not None
-                        send_move_command(self.s, x_pos=event.pos[0], y_pos=event.pos[1], client_id=client.id)
+                        send_move_command(self.s, x_pos=event.pos[0] + x_offset, y_pos=event.pos[1] + y_offset, client_id=client.id)
 
                     if event.type in [pygame.KEYUP, pygame.KEYDOWN]:
                         if event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_RIGHT, pygame.K_RIGHT, 
