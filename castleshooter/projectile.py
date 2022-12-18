@@ -40,7 +40,7 @@ class Projectile:
         self.source_x = source_x
         self.source_y = source_y
 
-        self.speed: int = 300
+        self.speed: int = 400
         self.type: ProjectileType = type
 
         # client_ids of friendly players

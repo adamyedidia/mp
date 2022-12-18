@@ -24,6 +24,7 @@ class CommandType(Enum):
     DIE = 'die'
     LOSE_HP = 'lose_hp'
     TELEPORT = 'teleport'
+    SET_SPEED = 'set_speed'
 
 
 PROJECTILE_COMMAND_TYPES = [CommandType.REMOVE_PROJECTILE]
