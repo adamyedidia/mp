@@ -8,6 +8,7 @@ from typing import Any, Optional
 import pygame
 from pygame import Color
 from announcement import Announcement, get_announcement_idempotency_key_for_command
+from score_utils import draw_score_centered_on_rectangle
 from flashlight_utils import FLASHLIGHT_COLOR, get_unit_vector_from_player_to_mouse, get_flashligh_triangle, point_in_triangle
 from weapon import Weapon, weapon_to_pygame_image, DAGGER_RANGE
 from death_reason import DeathReason, death_reason_to_verb
@@ -32,7 +33,7 @@ from json.decoder import JSONDecodeError
 
 from utils import (
     MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_rectangle, GAME_HEIGHT, GAME_WIDTH, 
-    clamp, clamp_to_game_x, clamp_to_game_y
+    clamp, clamp_to_game_x, clamp_to_game_y, MAX_SCORE
 )
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
@@ -131,6 +132,7 @@ class Game:
                         self.player.update_info_from_inferred_game_state(player)
                     else:
                         self.player = player
+                self.client_ids_to_actual_teams[player.client_id] = player.team
 
             client_player = self.player
             self.canvas.draw_background()
@@ -333,13 +335,16 @@ class Game:
 
             delayed_score = score.get()
             actual_score = score.get(actual=True)
+            actual_red_score, actual_blue_score = actual_score
+            game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
 
             self.draw_health_state(canvas)
             self.draw_announcements(canvas)
-            self.draw_big_text(canvas, actual_score)
+            self.draw_big_text(canvas, actual_score, game_over)
             self.draw_weapon_and_ammo(canvas)
             self.draw_client_ids_to_putative_teams(canvas)
             self.draw_garb(canvas)
+            self.draw_score(canvas, delayed_score, actual_score, game_over)
             if client_player is not None:
                 x_offset = int(client_player.x - self.width / 2)
                 y_offset = int(client_player.y - self.height / 2)
@@ -398,8 +403,13 @@ class Game:
             canvas.blit(text, (current_x, current_y))
             current_y += 25
 
-    def draw_big_text(self, canvas: Any, actual_score: tuple[int, int]) -> None:
-        if self.player is None:
+    def draw_big_text(self, canvas: Any, actual_score: tuple[int, int], game_over: bool) -> None:
+        if game_over:
+            red_score, blue_score = actual_score
+            winner = 'The red team' if red_score > blue_score else 'The blue team'
+            draw_text_centered_on_rectangle(canvas, f'Game over. {winner} wins.', 0, 0, self.width, self.height, 35)
+
+        elif self.player is None:
             draw_text_centered_on_rectangle(canvas, 'You died. Press enter to respawn.', 0, 0, self.width, self.height, 35)
             # font = pygame.font.SysFont("comicsans", 35)
             # text = font.render('You died. Press enter to respawn.', True, (0, 0, 0))
@@ -458,6 +468,10 @@ class Game:
         pygame.draw.line(canvas, (0,0,0), (-x_offset, -y_offset), (-x_offset, self.game_height-y_offset), width=3)
         pygame.draw.line(canvas, (0,0,0), (self.game_width-x_offset, -y_offset), (self.game_width-x_offset, self.game_height-y_offset), width=3)
         pygame.draw.line(canvas, (0,0,0), (-x_offset, self.game_height-y_offset), (self.game_width-x_offset, self.game_height-y_offset), width=3)
+
+    def draw_score(self, canvas: Any, delayed_score: tuple[int, int], actual_score: tuple[int, int], game_over: bool) -> None:
+        score = actual_score if game_over else delayed_score
+        draw_score_centered_on_rectangle(canvas, score[0], score[1], 0, 0, self.width, 200, 35)
 
 
 class GameState:

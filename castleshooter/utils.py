@@ -35,12 +35,7 @@ def draw_3_texts_centered_on_rectangle_inner(g: pygame.surface.Surface, text1: A
     combined_width = text1_rect.width + text2_rect.width + text3_rect.width
     g.blit(text1, (int(rectangle_center[0] - combined_width/2), int(rectangle_center[1] - text1_rect.height/2)))
     g.blit(text2, (int(rectangle_center[0] - combined_width/2 + text1_rect.width), int(rectangle_center[1] - text1_rect.height/2)))
-    g.blit(text2, (int(rectangle_center[0] - combined_width/2 + text1_rect.width + text2_rect.width), int(rectangle_center[1] - text1_rect.height/2)))
-
-
-def draw_score_centered_on_rectangle(g: pygame.surface.Surface, red_points: int, blue_points: int, x: int, y: int, width: int, height: int, font_size: int) -> None:
-    font = pygame.font.SysFont('comicsans', font_size)
-    text = font.render(str(red_points), True, (0,0,0))
+    g.blit(text3, (int(rectangle_center[0] - combined_width/2 + text1_rect.width + text2_rect.width), int(rectangle_center[1] - text1_rect.height/2)))
 
 
 def draw_text_centered_on_rectangle_inner(g: pygame.surface.Surface, text: Any, x: int, y: int, width: int, height: int) -> None:
@@ -61,6 +56,7 @@ def clamp(lower, x, upper):
 
 GAME_WIDTH = 3000
 GAME_HEIGHT = 3000
+MAX_SCORE = 20
 
 
 def clamp_to_game_x(x: int) -> int:
