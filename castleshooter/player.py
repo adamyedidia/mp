@@ -1,3 +1,4 @@
+from datetime import datetime
 import math
 from typing import Optional, Union
 import pygame
@@ -10,6 +11,7 @@ from direction import Direction, to_optional_direction
 from json.decoder import JSONDecodeError
 from weapon import Weapon
 from team import Team
+from garb import Garb
 
 from utils import to_optional_int, draw_text_centered_on_rectangle
 
@@ -20,7 +22,8 @@ class Player():
                  dest_x: Optional[int] = None, dest_y: Optional[int] = None,
                  healthbar: Optional['HealthBar'] = None,
                  hp: int = BASE_MAX_HP,
-                 arrows_puncturing: Optional[list[list[list[int]]]] = None):
+                 arrows_puncturing: Optional[list[list[list[int]]]] = None,
+                 speed: int = 200):
         self.client_id = client_id
         self.x = startx
         self.y = starty
@@ -34,9 +37,11 @@ class Player():
         self.healthbar: HealthBar = healthbar if healthbar is not None else HealthBar()
         self.hp = hp
         self.ammo = 0
-        self.weapon = Weapon.DAGGER
+        self.weapon: Optional[Weapon] = Weapon.DAGGER
+        self.garb: Optional[Garb] = None
+        self.garb_picked_up_at: Optional[datetime] = None
 
-        self.speed: int = 200
+        self.speed = speed
         self.arrows_puncturing = arrows_puncturing if arrows_puncturing is not None else []
 
     def draw(self, g: pygame.surface.Surface, x_offset: int, y_offset: int, team: Optional[Team] = None):
@@ -65,6 +70,7 @@ class Player():
             'direction': self.direction.value if self.direction is not None else None,
             'arrows_puncturing': self.arrows_puncturing,
             'team': self.team.value,
+            'speed': self.speed,
         })
 
     @classmethod
@@ -77,12 +83,13 @@ class Player():
                       healthbar=HealthBar.from_json(d['healthbar']), 
                       direction=to_optional_direction(d['direction']),
                       arrows_puncturing=d['arrows_puncturing'],
-                      team=Team(d['team']))
+                      team=Team(d['team']),
+                      speed=d['speed'])
 
     def copy(self) -> 'Player':
         return Player.from_json(self.to_json())
 
-    def update_from_json(self, j: str):
+    def update_from_json(self, j: str) -> None:
         d: dict = json.loads(j)
         self.x = d['x']
         self.y = d['y']

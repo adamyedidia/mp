@@ -26,7 +26,7 @@ from direction import direction_to_unit_vector
 
 from packet import (
     send_move_command, send_without_retry, send_turn_command, send_spawn_projectile_command, send_teleport_command,
-    send_lose_hp_command,
+    send_lose_hp_command, send_set_speed_command
 )
 from json.decoder import JSONDecodeError
 
@@ -35,6 +35,7 @@ from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
 import time
 from team import Team, team_to_color, rotate_team
+from garb import Garb, garb_to_pygame_image, garb_max_age
 
 
 ITEM_GENERATION_RATE = 2.0
@@ -60,14 +61,23 @@ def run_spontaneous_game_processes(game: 'Game') -> None:
 
 def generate_item(game: 'Game') -> None:
     next_item_id = generate_next_item_id(client_id=client.id)
-    category = ItemCategory.WEAPON
-    random_number = random.random()
-    if random_number < 0.33:
-        type = ItemType.FLASHLIGHT
-    elif random_number < .67:
-        type = ItemType.BOW
+    random_number_1 = random.random()
+    if random_number_1 < 0.4:
+        category = ItemCategory.GARB
     else:
-        type = ItemType.DAGGER
+        category = ItemCategory.WEAPON
+    random_number_2 = random.random()
+    if category == ItemCategory.WEAPON:
+        if random_number_2 < 0.33:
+            type = ItemType.FLASHLIGHT
+        elif random_number_2 < .67:
+            type = ItemType.BOW
+        else:
+            type = ItemType.DAGGER
+    elif category == ItemCategory.GARB:
+        type = ItemType.BOOTS
+    else:
+        raise Exception('Not implemented')
     game.items[next_item_id] = Item(next_item_id, random.randint(1, game.game_height-1), random.randint(1, game.game_width-1),
                                     category, type)
 
@@ -175,6 +185,11 @@ class Game:
                                     client_player.weapon = Weapon(self.item_target.type.value)
                                     if client_player.weapon == Weapon.BOW:
                                         client_player.ammo = 3
+                                elif self.item_target.category == ItemCategory.GARB:
+                                    client_player.garb = Garb(self.item_target.type.value)
+                                    client_player.garb_picked_up_at = datetime.now()
+                                    if client_player.garb == Garb.BOOTS:
+                                        send_set_speed_command(self.s, 300, client_id=client.id)
                                 self.item_target = None
 
                         elif event.key in [*SHIFT_KEYS, *NUMBER_KEYS.values()]:
@@ -286,11 +301,19 @@ class Game:
                 for projectile in game_state.projectiles:
                     projectile.draw(canvas, x_offset, y_offset)
 
+            if client_player is not None and client_player.garb is not None and client_player.garb_picked_up_at is not None:
+                current_time = datetime.now()
+                if client_player.garb_picked_up_at + garb_max_age(client_player.garb) < current_time:
+                    client_player.garb = None
+                    client_player.garb_picked_up_at = None
+                    send_set_speed_command(self.s, 200, client_id=client.id)
+
             self.draw_health_state(canvas)
             self.draw_announcements(canvas)
             self.draw_big_text(canvas)
             self.draw_weapon_and_ammo(canvas)
             self.draw_client_ids_to_putative_teams(canvas)
+            self.draw_garb(canvas)
             if client_player is not None:
                 x_offset = int(client_player.x - self.width / 2)
                 y_offset = int(client_player.y - self.height / 2)
@@ -371,6 +394,25 @@ class Game:
                 for _ in range(client_player.ammo):
                     current_x -= 30
                     draw_arrow(canvas, ARROW_COLOR, (current_x, arrow_bottom), (current_x, arrow_top))
+
+    def draw_garb(self, canvas: Any) -> None:
+        client_player = self.player
+        if client_player and client_player.garb and client_player.garb_picked_up_at:
+            current_x = self.width - 110
+            current_y = self.height - 240
+            image_surface = pygame.transform.scale(garb_to_pygame_image(client_player.garb), (100, 100)).convert_alpha()
+            canvas.blit(image_surface, (current_x, current_y))
+            self.draw_timer(canvas, client_player.garb_picked_up_at, client_player.garb_picked_up_at + garb_max_age(client_player.garb),
+                            current_x - 170, current_y)
+
+    def draw_timer(self, canvas: Any, start_time: datetime, end_time: datetime, timer_x: int, timer_y: int) -> None:
+        current_time = datetime.now()
+        timer_width = 25
+        timer_height = 100
+        if current_time > start_time and current_time < end_time:
+            pygame.draw.rect(canvas, (0,0,0), (timer_x, timer_y, timer_width, timer_height), width=2)
+            fraction_of_time_run_down = (current_time - start_time) / (end_time - start_time)
+            pygame.draw.rect(canvas, (0,128,0), (timer_x, timer_y, timer_width, int(fraction_of_time_run_down * timer_height)))
 
     def draw_client_ids_to_putative_teams(self, canvas: Any) -> None:
         current_x = self.width - 70
@@ -542,6 +584,10 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             player.y = command.data['y']
             player.dest_x = None
             player.dest_y = None
+        elif command.type == CommandType.SET_SPEED:
+            assert command.data is not None
+            assert player is not None
+            player.speed = command.data['speed']
         current_time = command.time
     _move_player(player, prev_time=current_time, next_time=end_time)
 

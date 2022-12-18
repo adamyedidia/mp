@@ -201,3 +201,9 @@ def send_teleport_command(conn: Any, x: int, y: int, *, client_id: int) -> Comma
     return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
                         type=CommandType.TELEPORT, time=datetime.now(), data={'x': x, 'y': y}, 
                         client_id=client_id), client_id=client_id)
+
+
+def send_set_speed_command(conn: Any, speed: int, *, client_id: int) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                        type=CommandType.SET_SPEED, time=datetime.now(), data={'speed': speed},
+                        client_id=client_id), client_id=client_id)
