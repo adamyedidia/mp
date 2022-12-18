@@ -24,6 +24,7 @@ class ItemType(Enum):
 
     # Garb
     BOOTS = 'boots'
+    ARMOR = 'armor'
 
 
 class Item:

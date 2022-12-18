@@ -78,7 +78,10 @@ def generate_item(game: 'Game') -> None:
         else:
             type = ItemType.DAGGER
     elif category == ItemCategory.GARB:
-        type = ItemType.BOOTS
+        if random_number_2 < 0.5:
+            type = ItemType.BOOTS
+        else:
+            type = ItemType.ARMOR
     else:
         raise Exception('Not implemented')
     game.items[next_item_id] = Item(next_item_id, random.randint(1, game.game_height-1), random.randint(1, game.game_width-1),
@@ -189,10 +192,19 @@ class Game:
                                     if client_player.weapon == Weapon.BOW:
                                         client_player.ammo = 3
                                 elif self.item_target.category == ItemCategory.GARB:
+                                    old_garb = client_player.garb
                                     client_player.garb = Garb(self.item_target.type.value)
                                     client_player.garb_picked_up_at = datetime.now()
                                     if client_player.garb == Garb.BOOTS:
                                         send_set_speed_command(self.s, 300, client_id=client.id)
+                                    elif client_player.garb == Garb.ARMOR and old_garb != Garb.ARMOR:
+                                        client_player.hp += 1
+                                    
+                                    if old_garb == Garb.BOOTS and client_player.garb != Garb.BOOTS:
+                                        send_set_speed_command(self.s, 200, client_id=client.id)
+                                    elif old_garb == Garb.ARMOR and client_player.garb != Garb.ARMOR:
+                                        client_player.hp -= 1
+
                                 self.item_target = None
 
                         elif event.key in [*SHIFT_KEYS, *NUMBER_KEYS.values()]:
@@ -297,6 +309,8 @@ class Game:
                 if self.item_target is not None:
                     if self.item_target.category == ItemCategory.WEAPON and client_player is not None and client_player.weapon is not None:
                         color = (255, 0, 0)
+                    elif self.item_target.category == ItemCategory.GARB and client_player is not None and client_player.garb is not None:
+                        color = (255, 0, 0)
                     else:
                         color = (0, 0, 0)
                     pygame.draw.circle(canvas, color, (self.item_target.x - x_offset, self.item_target.y - y_offset), 40, width = 2)
@@ -307,9 +321,13 @@ class Game:
             if client_player is not None and client_player.garb is not None and client_player.garb_picked_up_at is not None:
                 current_time = datetime.now()
                 if client_player.garb_picked_up_at + garb_max_age(client_player.garb) < current_time:
+                    old_garb = client_player.garb
                     client_player.garb = None
                     client_player.garb_picked_up_at = None
-                    send_set_speed_command(self.s, 200, client_id=client.id)
+                    if old_garb == Garb.BOOTS:
+                        send_set_speed_command(self.s, 200, client_id=client.id)
+                    elif old_garb == Garb.ARMOR:
+                        client_player.hp -= 1
 
             self.draw_health_state(canvas)
             self.draw_announcements(canvas)
