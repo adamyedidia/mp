@@ -403,7 +403,7 @@ class Game:
             image_surface = pygame.transform.scale(garb_to_pygame_image(client_player.garb), (100, 100)).convert_alpha()
             canvas.blit(image_surface, (current_x, current_y))
             self.draw_timer(canvas, client_player.garb_picked_up_at, client_player.garb_picked_up_at + garb_max_age(client_player.garb),
-                            current_x - 170, current_y)
+                            current_x - 50, current_y)
 
     def draw_timer(self, canvas: Any, start_time: datetime, end_time: datetime, timer_x: int, timer_y: int) -> None:
         current_time = datetime.now()
@@ -412,7 +412,8 @@ class Game:
         if current_time > start_time and current_time < end_time:
             pygame.draw.rect(canvas, (0,0,0), (timer_x, timer_y, timer_width, timer_height), width=2)
             fraction_of_time_run_down = (current_time - start_time) / (end_time - start_time)
-            pygame.draw.rect(canvas, (0,128,0), (timer_x, timer_y, timer_width, int(fraction_of_time_run_down * timer_height)))
+            pygame.draw.rect(canvas, (0,128,0), (timer_x, timer_y + int(fraction_of_time_run_down * timer_height), 
+                                                 timer_width, int((1.0 - fraction_of_time_run_down) * timer_height)))
 
     def draw_client_ids_to_putative_teams(self, canvas: Any) -> None:
         current_x = self.width - 70
@@ -665,6 +666,7 @@ def infer_and_store_game_state_snap() -> None:
     num_snaps_inferred += 1
     game_state_snapshots: list[str] = get_game_state_snapshots()
     new_snapshot = infer_game_state(client_id=None, end_time=datetime.now() - timedelta(seconds=3))
+    print(f'New snapshot: {new_snapshot.to_json()}')
     game_state_snapshots.append(json.dumps(new_snapshot.to_json()))
     if num_snaps_inferred % 8 == 0:
         print(f'Culling snapshots: {len(game_state_snapshots)}')
