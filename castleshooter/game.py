@@ -30,7 +30,10 @@ from packet import (
 )
 from json.decoder import JSONDecodeError
 
-from utils import MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_rectangle
+from utils import (
+    MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_rectangle, GAME_HEIGHT, GAME_WIDTH, 
+    clamp, clamp_to_game_x, clamp_to_game_y
+)
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
 import time
@@ -83,11 +86,11 @@ def generate_item(game: 'Game') -> None:
 
 
 class Game:
-    def __init__(self, w: int, h: int, game_width: int, game_height: int, client: Client, socket: socket):
+    def __init__(self, w: int, h: int, client: Client, socket: socket):
         self.width = w
         self.height = h
-        self.game_width = game_width
-        self.game_height = game_height
+        self.game_width = GAME_WIDTH
+        self.game_height = GAME_HEIGHT
         self.client = client
         self.s = socket
         self.player_number = self.client.id if self.client.id is not None else -1
@@ -518,15 +521,15 @@ def _move_player(player: Optional[Player], *, prev_time: datetime, next_time: da
         to_dest_unit_vector_x = (player.dest_x - player.x) / distance_to_dest if distance_to_dest > 0 else 0
         to_dest_unit_vector_y = (player.dest_y - player.y) / distance_to_dest if distance_to_dest > 0 else 0
         if distance_to_dest < distance_traveled or distance_to_dest <= 0:
-            player.x = player.dest_x
-            player.y = player.dest_y
+            player.x = clamp_to_game_x(player.dest_x)
+            player.y = clamp_to_game_y(player.dest_y)
         else:
-            player.x += int(to_dest_unit_vector_x * distance_traveled)
-            player.y += int(to_dest_unit_vector_y * distance_traveled)
+            player.x = clamp_to_game_x(player.x + int(to_dest_unit_vector_x * distance_traveled))
+            player.y = clamp_to_game_y(player.y + int(to_dest_unit_vector_y * distance_traveled))
     elif player.direction is not None:
         unit_vector_x, unit_vector_y = direction_to_unit_vector(player.direction)
-        player.x += int(unit_vector_x * distance_traveled)
-        player.y += int(unit_vector_y * distance_traveled)
+        player.x = clamp_to_game_x(player.x + int(unit_vector_x * distance_traveled))
+        player.y = clamp_to_game_y(player.y + int(unit_vector_y * distance_traveled))
 
 
 def _run_commands_for_player(starting_time: datetime, player: Optional[Player], 

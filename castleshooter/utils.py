@@ -34,3 +34,17 @@ def draw_text_centered_on_rectangle(g: pygame.surface.Surface, message: str, x: 
     rectangle_center = (x + width/2, y + height/2)
     g.blit(text, (int(rectangle_center[0] - text_rect.width/2), int(rectangle_center[1] - text_rect.height/2)))
     # pygame.draw.rect(g, self.color, (int(math.ceil(self.x - self.width / 2)), int(math.ceil(self.y - self.height / 2)), self.width, self.height), 0)
+
+
+def clamp(lower, x, upper):
+    return min(max(lower, x), upper)
+
+
+GAME_WIDTH = 3000
+GAME_HEIGHT = 3000
+
+
+def clamp_to_game_x(x: int) -> int:
+    return clamp(0, x, GAME_WIDTH)
+def clamp_to_game_y(y: int) -> int:
+    return clamp(0, y, GAME_HEIGHT)
