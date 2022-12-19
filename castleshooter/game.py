@@ -108,7 +108,7 @@ class Game:
         self.mouse_target: Optional[Player] = None
         self.items: dict[int, Item] = {}
         self.item_target: Optional[Item] = None
-        self.client_ids_to_putative_teams: dict[int, Team] = {}
+        self.client_ids_to_putative_teams: dict[int, Optional[Team]] = {}
         self.client_ids_to_actual_teams: dict[int, Team] = {}
 
     def run(self):
@@ -122,7 +122,6 @@ class Game:
 
             if self.player_number < 0:
                 self.player_number = self.client.id if self.client.id is not None else -1
-                self.players[self.player_number] = self.player
                 continue
 
             game_state = infer_game_state(client_id=client.id)
@@ -222,8 +221,8 @@ class Game:
                                     number_pressed = number
                             if shift_pressed and number_pressed is not None and client_player.weapon == Weapon.DAGGER:
                                 pressed_target_id = number_pressed
-                                for pressed_target in target.players:
-                                    if pressed_target.id == pressed_target_id and sqrt((player.x - client_player.x)**2 + (player.y - client_player.y)**2) < DAGGER_RANGE:
+                                for pressed_target in game_state.players:
+                                    if pressed_target.client_id == pressed_target_id and sqrt((pressed_target.x - client_player.x)**2 + (pressed_target.y - client_player.y)**2) < DAGGER_RANGE:
                                         send_lose_hp_command(self.s, client_player.client_id, pressed_target_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
                                         send_teleport_command(self.s, pressed_target.x, pressed_target.y, client_id=client.id)
                             elif not shift_pressed and number_pressed is not None and client.team is not None:
@@ -268,6 +267,7 @@ class Game:
             else:
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                        assert client.team
                         send_spawn_command(self.s, 300, 300, client.team, client_id=client.id)       
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
@@ -298,7 +298,7 @@ class Game:
                     draw_arrow(canvas, ARROW_COLOR, (client_player.x - x_offset, client_player.y - y_offset), (arrow_x, arrow_y))
             
                 elif client_player.weapon == Weapon.FLASHLIGHT:
-                    triangle = get_flashligh_triangle(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
+                    triangle = get_flashlight_triangle(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
                     pygame.draw.polygon(canvas, FLASHLIGHT_COLOR, triangle, width=0)
 
             if client_player is not None and x_offset is not None and y_offset is not None:

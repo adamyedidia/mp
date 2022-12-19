@@ -274,8 +274,10 @@ def client_main() -> None:
     pygame.init()
     pygame.font.init()
 
+    s: Optional[Any] = None
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        assert s
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.connect((SERVER, PORT))
         print('connected to server!')
@@ -289,6 +291,7 @@ def client_main() -> None:
         start_up_game(s)
     finally:
         print('Closing the socket!!')
+        assert s
         s.close()
 
 if __name__ == '__main__':
