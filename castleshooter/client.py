@@ -21,6 +21,12 @@ from time import sleep
 import pygame
 from team import Team, flip_team
 from score import score
+from enum import Enum
+
+
+class BlockOnServerReason(Enum):
+    GET_CLIENT_ID = 'get_proto_client_id'
+    START_GAME = 'start_game'
 
 
 game: Optional[Game] = None
@@ -44,14 +50,30 @@ def start_up_game(socket: Any) -> None:
     game.run()    
 
 
-def _handle_client_id_packet(payload: str) -> bool:
-    if payload.startswith('client_id|') and client.id in [None, -1]:
-        _, raw_client_id, team = payload.split('|')
-        print(f'setting client id to {raw_client_id} and team to {team}')
-        client.set_id(int(raw_client_id))
-        client.set_team(Team(team))
-        return True
-    return False    
+def _infer_block_on_server_reason_from_packet(payload: str) -> Optional[BlockOnServerReason]:
+    if payload.startswith('client_id|'):
+        return BlockOnServerReason.GET_CLIENT_ID
+    elif payload.startswith('start_game|'):
+        return BlockOnServerReason.START_GAME
+    return None
+
+
+def _handle_blocking_packet(payload: str, block_on_server_reason: BlockOnServerReason) -> bool:
+    payload_block_on_server_reason = _infer_block_on_server_reason_from_packet(payload)
+    if payload_block_on_server_reason == block_on_server_reason:
+        if block_on_server_reason == BlockOnServerReason.GET_CLIENT_ID:
+            _, raw_client_id = payload.split('|')
+            print(f'setting client id to {raw_client_id}')
+            client.set_id(int(raw_client_id))
+            return True
+    return False
+    # if payload.startswith('client_id|') and client.id in [None, -1]:
+    #     _, raw_client_id, team = payload.split('|')
+    #     print(f'setting client id to {raw_client_id} and team to {team}')
+    #     client.set_id(int(raw_client_id))
+    #     client.set_team(Team(team))
+    #     return True
+    # return False    
 
 
 def handle_announcements_for_commands(commands_for_player: list[Command]) -> None:
@@ -206,7 +228,7 @@ def _clear_stored_data(stored_data: list[str]) -> None:
 
 
 # Returns whether or not it's the client_id packet at the beginning
-def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool:
+def _handle_datum(socket: Any, datum: str, block_on_server_reason: Optional[BlockOnServerReason] = None) -> bool:
     print(f'received: {datum[:LOG_CUTOFF]}\n')
     packet = Packet.from_str(datum)
     packet_id = packet.id
@@ -224,8 +246,8 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
         # Want to make sure not to handle the same packet twice due to a re-send, 
         # if our ack didn't get through
         if not rget(handled_redis_key, client_id=client.id or -1):
-            if client_id_only:
-                if _handle_client_id_packet(payload):
+            if block_on_server_reason:
+                if _handle_blocking_packet(payload, block_on_server_reason=block_on_server_reason):
                     return True
             else:
                 _handle_payload_from_server(payload)
@@ -236,7 +258,7 @@ def _handle_datum(socket: Any, datum: str, client_id_only: bool = False) -> bool
     return False
 
 
-def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None:
+def listen_for_server_updates(socket: Any, block_on_server_reason: Optional[BlockOnServerReason] = None) -> None:
     while True:
         global stored_data
         try:
@@ -251,14 +273,14 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
             # to the next packet            
             if datum:
                 try:
-                    if _handle_datum(socket, datum, client_id_only=client_id_only) and client_id_only:
+                    if _handle_datum(socket, datum, block_on_server_reason=block_on_server_reason) and block_on_server_reason is not None:
                         return
                 except Exception as e1:
                     stored_data.append(datum)
                     if len(stored_data) > 1:
                         joint_datum = ''.join(stored_data)
                         try:
-                            if _handle_datum(socket, ''.join(stored_data), client_id_only=client_id_only) and client_id_only:
+                            if _handle_datum(socket, ''.join(stored_data), block_on_server_reason=block_on_server_reason) and block_on_server_reason is not None:
                                 return
                         except Exception as e2:
                             print(f'Ignoring {joint_datum} because of exception: {e2}\n')
