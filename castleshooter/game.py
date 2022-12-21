@@ -22,7 +22,7 @@ from command import Command, CommandType, get_commands_by_player
 from redis_utils import redis_lock, rget, rset
 from player import Player, BASE_MAX_HP
 from canvas import Canvas
-from client_utils import Client, client
+from client_utils import Client, client, get_player_number_from_client_id, get_client_id_from_player_number
 from direction import direction_to_unit_vector
 
 from packet import (
@@ -108,8 +108,8 @@ class Game:
         self.mouse_target: Optional[Player] = None
         self.items: dict[int, Item] = {}
         self.item_target: Optional[Item] = None
-        self.client_ids_to_putative_teams: dict[int, Optional[Team]] = {}
-        self.client_ids_to_actual_teams: dict[int, Team] = {}
+        self.player_numbers_to_putative_teams: dict[int, Optional[Team]] = {}
+        self.player_numbers_to_actual_teams: dict[int, Team] = {}
 
     def run(self):
         print('Running the game!')
@@ -117,6 +117,24 @@ class Game:
         run = True
         if self.player_number < 0:
             print(f'Uh oh, my player number is {self.player_number}, which is messed up')
+
+        # TODO replace this with something real
+        player_number_vs_client_id_mapping = [
+            (1, 101),
+            (2, 102),
+            (3, 103),
+            (4, 104),
+            (5, 105),
+            (6, 106),
+            (7, 107),
+            (8, 108),                                
+        ]
+
+        for player_number, client_id in player_number_vs_client_id_mapping:
+            rset(f'player_number:{client_id}', player_number, client_id=client.id)
+            rset(f'client_id:{player_number}', client_id, client_id=client.id)
+            print(f'player_number:{client_id}')
+        
         while run:
             clock.tick(60)
 
@@ -131,7 +149,9 @@ class Game:
                         self.player.update_info_from_inferred_game_state(player)
                     else:
                         self.player = player
-                self.client_ids_to_actual_teams[player.client_id] = player.team
+
+                # TODO get rid of these once game launching code is properly written
+                self.player_numbers_to_actual_teams[player.client_id] = player.team          
 
             client_player = self.player
             self.canvas.draw_background()
@@ -167,7 +187,9 @@ class Game:
                                     arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
                                     arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
                                     send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, 
-                                                                [client.id, *[client_id for client_id in self.client_ids_to_putative_teams.keys() if self.client_ids_to_putative_teams.get(client_id) == client.team]], 
+                                                                [client.id, *[get_client_id_from_player_number(player_number, client_id=client.id) 
+                                                                for player_number in self.player_numbers_to_putative_teams.keys() 
+                                                                if self.player_numbers_to_putative_teams.get(player_number) == client.team]], 
                                                                 type=ProjectileType.ARROW, client_id=client.id)
                                     # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
                                     client_player.ammo -= 1
@@ -183,7 +205,7 @@ class Game:
                                     
                                     for player in game_state.players:
                                         if point_in_triangle((player.x, player.y), triangle):
-                                            self.client_ids_to_putative_teams[player.client_id] = player.team
+                                            self.player_numbers_to_putative_teams[player.player_number] = player.team
 
                                     client_player.weapon = None
 
@@ -226,7 +248,7 @@ class Game:
                                         send_lose_hp_command(self.s, client_player.client_id, pressed_target_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
                                         send_teleport_command(self.s, pressed_target.x, pressed_target.y, client_id=client.id)
                             elif not shift_pressed and number_pressed is not None and client.team is not None:
-                                self.client_ids_to_putative_teams[number_pressed] = rotate_team(self.client_ids_to_putative_teams.get(number_pressed), client.team)
+                                self.player_numbers_to_putative_teams[number_pressed] = rotate_team(self.player_numbers_to_putative_teams.get(number_pressed), client.team)
 
                         elif event.key == pygame.K_ESCAPE:
                             run = False
@@ -250,7 +272,7 @@ class Game:
                 min_distance = DAGGER_RANGE
                 if client_player.weapon == Weapon.DAGGER:
                     for possible_target in game_state.players:
-                        if possible_target.client_id != client_player.client_id and self.client_ids_to_putative_teams.get(possible_target.client_id) != client.team:
+                        if possible_target.client_id != client_player.client_id and self.player_numbers_to_putative_teams.get(possible_target.player_number) != client.team:
                             distance = sqrt((possible_target.x - client_player.x)**2 + (possible_target.y - client_player.y)**2)
                             if distance < min_distance:
                                 self.target = possible_target
@@ -303,7 +325,7 @@ class Game:
 
             if client_player is not None and x_offset is not None and y_offset is not None:
                 for player in game_state.players:
-                    putative_player_team = player.team if player.client_id == client.id else self.client_ids_to_putative_teams.get(player.client_id)
+                    putative_player_team = player.team if player.client_id == client.id else self.player_numbers_to_putative_teams.get(player.player_number)
                     player.draw(canvas, x_offset, y_offset, putative_player_team)
                     if target is not None and client_player is not None and player.client_id != client_player.client_id and player.client_id == target.client_id:
                         pygame.draw.circle(canvas, (0,0,0), (player.x - x_offset, player.y - y_offset), 40, width=2)
@@ -342,7 +364,7 @@ class Game:
             self.draw_announcements(canvas)
             self.draw_big_text(canvas, actual_score, game_over)
             self.draw_weapon_and_ammo(canvas)
-            self.draw_client_ids_to_putative_teams(canvas)
+            self.draw_player_numbers_to_putative_teams(canvas)
             self.draw_garb(canvas)
             self.draw_score(canvas, delayed_score, actual_score, game_over)
             if client_player is not None:
@@ -451,16 +473,17 @@ class Game:
             pygame.draw.rect(canvas, (0,128,0), (timer_x, timer_y + int(fraction_of_time_run_down * timer_height), 
                                                  timer_width, int((1.0 - fraction_of_time_run_down) * timer_height)))
 
-    def draw_client_ids_to_putative_teams(self, canvas: Any) -> None:
+    def draw_player_numbers_to_putative_teams(self, canvas: Any) -> None:
         current_x = self.width - 70
         current_y = 70
 
-        for client_id in range(1, 9):
+        for player_number in range(1, 9):
+            client_id = get_client_id_from_player_number(player_number, client_id=client.id)
             if client_id == client.id:
                 continue
             pygame.draw.circle(canvas, (0,0,0), (current_x, current_y), 25, width=2)
-            pygame.draw.circle(canvas, team_to_color(self.client_ids_to_putative_teams.get(client_id)), (current_x, current_y), 25)
-            draw_text_centered_on_rectangle(canvas, str(client_id), current_x, current_y, 0, 0, 25)        
+            pygame.draw.circle(canvas, team_to_color(self.player_numbers_to_putative_teams.get(player_number)), (current_x, current_y), 25)
+            draw_text_centered_on_rectangle(canvas, str(player_number), current_x, current_y, 0, 0, 25)        
             current_y += 60    
 
     def draw_edges_of_map(self, canvas: Any, x_offset: int, y_offset: int) -> None:
@@ -572,6 +595,7 @@ def _move_player(player: Optional[Player], *, prev_time: datetime, next_time: da
 def _run_commands_for_player(starting_time: datetime, player: Optional[Player], 
                              commands_for_player: list[Command], 
                              player_client_id: int,
+                             player_number: int,
                              all_projectiles: list[Projectile],
                              end_time: Optional[datetime] = None) -> Optional[Player]:
     if end_time is None:
@@ -593,7 +617,7 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
             player.dest_y = command.data['y']
         elif command.type == CommandType.SPAWN:
             assert command.data is not None
-            player = Player(client_id=player_client_id, startx=command.data['x'], starty=command.data['y'], team=Team(command.data['team']))      
+            player = Player(client_id=player_client_id, player_number=player_number, startx=command.data['x'], starty=command.data['y'], team=Team(command.data['team']))      
         elif command.type == CommandType.TURN:
             assert player is not None
             assert command.data is not None
@@ -675,11 +699,12 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
     for player in snap_to_run_forward_from.players:
         assert player is not None
         player_client_id = player.client_id
+        player_number = player.player_number
         player_ids_commands_have_been_run_for.add(player_client_id)
         raw_commands_for_player = raw_commands_by_player.get(player_client_id) or []
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)
-        player = _run_commands_for_player(snap_to_run_forward_from.time, player.copy(), commands_for_player, player_client_id,
+        player = _run_commands_for_player(snap_to_run_forward_from.time, player.copy(), commands_for_player, player_client_id, player_number,
                                           all_projectiles, end_time=end_time)
         if player:
             final_players.append(player)
@@ -690,7 +715,9 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
         player_ids_commands_have_been_run_for.add(player_client_id)
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)        
-        player = _run_commands_for_player(snap_to_run_forward_from.time, None, commands_for_player, player_client_id,
+        spawn_commands_for_player = [c for c in commands_for_player if c.type == CommandType.SPAWN]
+        player_number = get_player_number_from_client_id(player_client_id, client_id=client_id)                                     
+        player = _run_commands_for_player(snap_to_run_forward_from.time, None, commands_for_player, player_client_id, player_number,
                                           all_projectiles, end_time=end_time)
         if player:
             final_players.append(player)
