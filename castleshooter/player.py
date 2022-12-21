@@ -18,13 +18,15 @@ from utils import to_optional_int, draw_text_centered_on_rectangle
 BASE_MAX_HP = 4
 
 class Player():
-    def __init__(self, client_id: int, startx: int, starty: int, team: Team, direction: Optional[Direction] = None,
+    def __init__(self, client_id: int, startx: int, starty: int, team: Team, player_number: int, 
+    direction: Optional[Direction] = None,
                  dest_x: Optional[int] = None, dest_y: Optional[int] = None,
                  healthbar: Optional['HealthBar'] = None,
                  hp: int = BASE_MAX_HP,
                  arrows_puncturing: Optional[list[list[list[int]]]] = None,
                  speed: int = 200):
         self.client_id = client_id
+        self.player_number = player_number
         self.x = startx
         self.y = starty
         self.dest_x = dest_x
@@ -51,7 +53,7 @@ class Player():
         pygame.draw.rect(g, (0,0,0), (x, y, self.width, self.height), width=2)
         for arrow in self.arrows_puncturing:
             draw_arrow(g, ARROW_COLOR, (arrow[0][0] + self.x - x_offset, arrow[0][1] + self.y - y_offset), (arrow[1][0] + self.x - x_offset, arrow[1][1] + self.y - y_offset))
-        draw_text_centered_on_rectangle(g, str(self.client_id), x, y, self.width, self.height, 35)
+        draw_text_centered_on_rectangle(g, str(self.player_number), x, y, self.width, self.height, 35)
 
     def make_valid_position(self, w: int, h: int) -> None:
         self.x = max(0, self.x)
@@ -62,6 +64,7 @@ class Player():
     def to_json(self) -> str:
         return json.dumps({
             'client_id': self.client_id,
+            'player_number': self.player_number,
             'x': self.x,
             'y': self.y,
             'dest_x': self.dest_x,
@@ -81,6 +84,7 @@ class Player():
         return Player(client_id=d['client_id'], startx=d['x'], starty=d['y'], 
                       dest_x=to_optional_int(d['dest_x']), dest_y=to_optional_int(d['dest_y']),
                       healthbar=HealthBar.from_json(d['healthbar']), 
+                      player_number=d['player_number'],
                       direction=to_optional_direction(d['direction']),
                       arrows_puncturing=d['arrows_puncturing'],
                       team=Team(d['team']),

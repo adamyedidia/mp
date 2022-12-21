@@ -9,7 +9,7 @@ from typing import Any, Optional
 from redis_utils import rset, rget, redis_lock    
 from _thread import start_new_thread
 from threading import Thread
-from client_utils import client
+from client_utils import client, get_player_number_from_client_id
 from packet import (
     Packet, send_ack, send_spawn_command, send_without_retry, packet_ack_redis_key, packet_handled_redis_key
 )
@@ -107,7 +107,7 @@ def handle_client_changes_for_all_commands(commands_by_player: dict[int, list[st
                         game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
                         print(f'Not game over: {not game_over}')
                         if not game_over:                    
-                            team_to_gain_point = flip_team(game.client_ids_to_actual_teams[client_id])
+                            team_to_gain_point = flip_team(game.player_numbers_to_actual_teams[get_player_number_from_client_id(client_id, client_id=client.id)])
                             print(f'incrementing {team_to_gain_point}\n')                            
                             score.increment(team_to_gain_point, max_delay_seconds=10)
 

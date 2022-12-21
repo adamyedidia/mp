@@ -113,7 +113,7 @@ class GameState:
 def _get_new_connection_id(active_connections_by_id: dict[int, Connection]) -> int:
     if active_connections_by_id:
         return max(active_connections_by_id.keys()) + 1
-    return 1
+    return 101
 
 
 def _handle_incoming_connection(connection: Connection, game_state: GameState) -> None:
@@ -160,6 +160,23 @@ def main() -> None:
 
     game_state = GameState()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # TODO replace this with something real
+    player_number_vs_client_id_mapping = [
+        (1, 101),
+        (2, 102),
+        (3, 103),
+        (4, 104),
+        (5, 105),
+        (6, 106),
+        (7, 107),
+        (8, 108),                                
+    ]
+
+    for player_number, client_id in player_number_vs_client_id_mapping:
+        rset(f'player_number:{client_id}', player_number, client_id=None)
+        rset(f'client_id:{player_number}', client_id, client_id=None)
+    
 
     start_new_thread(_create_game_state_snaps, tuple([]))
     try:
