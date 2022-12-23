@@ -23,16 +23,15 @@ class Client:
 client = Client()
 
 
-def get_player_number_from_client_id(from_client_id: int, *, client_id: Optional[int]) -> int:
-    print(f'player_number:{from_client_id}')
-    raw_player_number = rget(f'player_number:{from_client_id}', client_id=client_id)
+def get_player_number_from_client_id(from_client_id: int, *, client_id: Optional[int], game_name: Optional[str] = None) -> int:
+    raw_player_number = rget(f'player_number:{from_client_id}', client_id=client_id, game_name=game_name)
     assert raw_player_number is not None
     return int(raw_player_number)
 
 
-def get_client_id_from_player_number(player_number: int, *, client_id: int) -> int:
+def get_client_id_from_player_number(player_number: int, *, client_id: int, game_name: Optional[str] = None) -> int:
     assert client_id is not None
-    raw_client_id = rget(f'client_id:{player_number}', client_id=client_id)
+    raw_client_id = rget(f'client_id:{player_number}', client_id=client_id, game_name=game_name)
     assert raw_client_id is not None
     return int(raw_client_id)
 

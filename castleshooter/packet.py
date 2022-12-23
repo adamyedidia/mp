@@ -141,7 +141,7 @@ def send_command(conn: Any, command: Command, *, client_id: int) -> Command:
 
 
 def _generate_next_command_id(client_id: Optional[int]) -> int:
-    next_command_id = int(rget('next_command_id', client_id=client_id) or '0') + 1
+    next_command_id = int(rget('next_command_id', client_id=client_id) or '0') + 2
     rset('next_command_id', next_command_id, client_id=client_id)
     return next_command_id
 
@@ -151,10 +151,14 @@ def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> C
                         data={'x': x_pos, 'y': y_pos}), client_id=client_id)
 
 
+def generate_spawn_command(x_pos: int, y_pos: int, team: Team, *, client_id: int) -> Command:
+    return Command(id=_generate_next_command_id(client_id=client_id), 
+                   type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
+                   data={'x': x_pos, 'y': y_pos, 'team': team.value})
+
+
 def send_spawn_command(conn: Any, x_pos: int, y_pos: int, team: Team, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
-                        type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
-                        data={'x': x_pos, 'y': y_pos, 'team': team.value}), client_id=client_id)
+    return send_command(conn, generate_spawn_command(x_pos, y_pos, team, client_id=client_id), client_id=client_id)
 
 
 def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: int) -> Command:
