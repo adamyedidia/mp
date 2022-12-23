@@ -56,22 +56,23 @@ class Command():
                                        'client_id': d.get('client_id')}))
 
 
-def get_commands_by_player(*, client_id: Optional[int] = None) -> dict[int, list[str]]:
+def get_commands_by_player(*, client_id: Optional[int] = None, game_name: Optional[str] = None) -> dict[int, list[str]]:
     if client_id is not None:
         return commands_by_player
     else:
-        return {int(key): val for key, val in json.loads(rget('commands_by_player', client_id=None) or '{}').items()}
+        return {int(key): val for key, val in json.loads(rget('commands_by_player', client_id=None, game_name=game_name) or '{}').items()}
 
 
-def get_commands_by_projectile(*, client_id: Optional[int] = None) -> dict[int, list[str]]:
+def get_commands_by_projectile(*, client_id: Optional[int] = None, game_name: Optional[str] = None) -> dict[int, list[str]]:
     if client_id is not None:
         return commands_by_projectile
     else:
-        return {int(key): val for key, val in json.loads(rget('commands_by_projectile', client_id=None) or '{}').items()}    
+        return {int(key): val for key, val in json.loads(rget('commands_by_projectile', client_id=None, game_name=game_name) or '{}').items()}    
 
 
 def store_command(command: Command, *, for_client: int, 
-                  client_id: Optional[int] = None) -> None:
+                  client_id: Optional[int] = None,
+                  game_name: Optional[str] = None) -> None:
     command_str = json.dumps(command.to_json())
     is_projectile_command = (command.type in PROJECTILE_COMMAND_TYPES)
     global commands_by_player
@@ -84,9 +85,9 @@ def store_command(command: Command, *, for_client: int,
     else:
         if command.time < datetime.now() - timedelta(seconds=2):
             return
-        commands = get_commands_by_projectile(client_id=None) if is_projectile_command else get_commands_by_player(client_id=None)
+        commands = get_commands_by_projectile(client_id=None, game_name=game_name) if is_projectile_command else get_commands_by_player(client_id=None, game_name=game_name)
         command_id = command.data['projectile_id'] if is_projectile_command else command.client_id  # type: ignore
-        with redis_lock(f'add_command_for_player_redis_key_{client_id}', client_id=None):
+        with redis_lock(f'add_command_for_player_redis_key_{client_id}', client_id=None, game_name=game_name):
             assert command_id is not None
             if command_id in commands:
                 l = commands[command_id]
@@ -94,4 +95,4 @@ def store_command(command: Command, *, for_client: int,
                 commands[command_id].append(command_str)
             else:
                 commands[command_id] = [command_str]
-            rset('commands_by_projectile' if is_projectile_command else 'commands_by_player', json.dumps(commands), client_id=None)
+            rset('commands_by_projectile' if is_projectile_command else 'commands_by_player', json.dumps(commands), client_id=None, game_name=game_name)
