@@ -117,23 +117,6 @@ class Game:
         run = True
         if self.player_number < 0:
             print(f'Uh oh, my player number is {self.player_number}, which is messed up')
-
-        # TODO replace this with something real
-        player_number_vs_client_id_mapping = [
-            (1, 101),
-            (2, 102),
-            (3, 103),
-            (4, 104),
-            (5, 105),
-            (6, 106),
-            (7, 107),
-            (8, 108),                                
-        ]
-
-        for player_number, client_id in player_number_vs_client_id_mapping:
-            rset(f'player_number:{client_id}', player_number, client_id=client.id)
-            rset(f'client_id:{player_number}', client_id, client_id=client.id)
-            print(f'player_number:{client_id}')
         
         while run:
             clock.tick(60)
@@ -355,6 +338,8 @@ class Game:
                     elif old_garb == Garb.ARMOR:
                         client_player.hp -= 1
 
+            print(client.game_name, client.game_started)
+
             if client.game_name is not None and client.game_started:
                 delayed_score = score.get()
                 actual_score = score.get(actual=True)
@@ -372,7 +357,6 @@ class Game:
                     x_offset = int(client_player.x - self.width / 2)
                     y_offset = int(client_player.y - self.height / 2)
                     self.draw_edges_of_map(canvas, x_offset, y_offset)
-                self.canvas.update()
 
             elif client.game_name is None:
                 game_names = json.loads(rget('game_names', client_id=client.id) or '[]')
@@ -388,6 +372,7 @@ class Game:
                 else:
                     draw_text_centered_on_rectangle(canvas, '\n'.join([str(player[0]) for player in active_players]), 0, 0, self.width, self.height, 35)
 
+            self.canvas.update()
 
         pygame.quit()
 
