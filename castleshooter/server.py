@@ -294,8 +294,8 @@ def server_loop(game_name: str) -> None:
             
             sleep(0.01)
             print(f'A new client has connected! ID: {new_connection_id}')
-            start_new_thread(send_with_retry, (conn, f'client_id|{new_connection_id}', None))
-            start_new_thread(send_with_retry, (conn, f'game_names|{rget("game_names", client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME) or "{}"}', None))
+            start_new_thread(send_with_retry, (conn, f'client_id|{new_connection_id}', None, SPECIAL_LOBBY_MANAGER_GAME_NAME))
+            start_new_thread(send_with_retry, (conn, f'game_names|{rget("game_names", client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME) or "{}"}', None, SPECIAL_LOBBY_MANAGER_GAME_NAME))
             print(f'Done sending client id of {new_connection_id}!')
             sleep(0.001)
 
