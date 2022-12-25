@@ -9,6 +9,8 @@ class Client:
         self.id = -1
         self.team: Optional[Team] = None
         self.player_number: Optional[int] = None
+        self.game_started: bool = False
+        self.game_name: Optional[str] = None
 
     def set_id(self, id: int) -> None:
         self.id = id
@@ -18,6 +20,12 @@ class Client:
 
     def set_player_number(self, player_number: int) -> None:
         self.player_number = player_number
+
+    def set_game_started(self, game_started: bool) -> None:
+        self.game_started = game_started
+
+    def set_game_name(self, game_name: str) -> None:
+        self.game_name = game_name
 
 
 client = Client()
