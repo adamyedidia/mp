@@ -9,6 +9,8 @@ class Client:
         self.id = -1
         self.team: Optional[Team] = None
         self.player_number: Optional[int] = None
+        self.game_started: bool = False
+        self.game_name: Optional[str] = None
 
     def set_id(self, id: int) -> None:
         self.id = id
@@ -19,20 +21,25 @@ class Client:
     def set_player_number(self, player_number: int) -> None:
         self.player_number = player_number
 
+    def set_game_started(self, game_started: bool) -> None:
+        self.game_started = game_started
+
+    def set_game_name(self, game_name: str) -> None:
+        self.game_name = game_name
+
 
 client = Client()
 
 
-def get_player_number_from_client_id(from_client_id: int, *, client_id: Optional[int]) -> int:
-    print(f'player_number:{from_client_id}')
-    raw_player_number = rget(f'player_number:{from_client_id}', client_id=client_id)
+def get_player_number_from_client_id(from_client_id: int, *, client_id: Optional[int], game_name: Optional[str] = None) -> int:
+    raw_player_number = rget(f'player_number:{from_client_id}', client_id=client_id, game_name=game_name)
     assert raw_player_number is not None
     return int(raw_player_number)
 
 
-def get_client_id_from_player_number(player_number: int, *, client_id: int) -> int:
+def get_client_id_from_player_number(player_number: int, *, client_id: int, game_name: Optional[str] = None) -> int:
     assert client_id is not None
-    raw_client_id = rget(f'client_id:{player_number}', client_id=client_id)
+    raw_client_id = rget(f'client_id:{player_number}', client_id=client_id, game_name=game_name)
     assert raw_client_id is not None
     return int(raw_client_id)
 

@@ -117,23 +117,6 @@ class Game:
         run = True
         if self.player_number < 0:
             print(f'Uh oh, my player number is {self.player_number}, which is messed up')
-
-        # TODO replace this with something real
-        player_number_vs_client_id_mapping = [
-            (1, 101),
-            (2, 102),
-            (3, 103),
-            (4, 104),
-            (5, 105),
-            (6, 106),
-            (7, 107),
-            (8, 108),                                
-        ]
-
-        for player_number, client_id in player_number_vs_client_id_mapping:
-            rset(f'player_number:{client_id}', player_number, client_id=client.id)
-            rset(f'client_id:{player_number}', client_id, client_id=client.id)
-            print(f'player_number:{client_id}')
         
         while run:
             clock.tick(60)
@@ -355,22 +338,40 @@ class Game:
                     elif old_garb == Garb.ARMOR:
                         client_player.hp -= 1
 
-            delayed_score = score.get()
-            actual_score = score.get(actual=True)
-            actual_red_score, actual_blue_score = actual_score
-            game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
+            print(client.game_name, client.game_started)
 
-            self.draw_health_state(canvas)
-            self.draw_announcements(canvas)
-            self.draw_big_text(canvas, actual_score, game_over)
-            self.draw_weapon_and_ammo(canvas)
-            self.draw_player_numbers_to_putative_teams(canvas)
-            self.draw_garb(canvas)
-            self.draw_score(canvas, delayed_score, actual_score, game_over)
-            if client_player is not None:
-                x_offset = int(client_player.x - self.width / 2)
-                y_offset = int(client_player.y - self.height / 2)
-                self.draw_edges_of_map(canvas, x_offset, y_offset)
+            if client.game_name is not None and client.game_started:
+                delayed_score = score.get()
+                actual_score = score.get(actual=True)
+                actual_red_score, actual_blue_score = actual_score
+                game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
+
+                self.draw_health_state(canvas)
+                self.draw_announcements(canvas)
+                self.draw_big_text(canvas, actual_score, game_over)
+                self.draw_weapon_and_ammo(canvas)
+                self.draw_player_numbers_to_putative_teams(canvas)
+                self.draw_garb(canvas)
+                self.draw_score(canvas, delayed_score, actual_score, game_over)
+                if client_player is not None:
+                    x_offset = int(client_player.x - self.width / 2)
+                    y_offset = int(client_player.y - self.height / 2)
+                    self.draw_edges_of_map(canvas, x_offset, y_offset)
+
+            elif client.game_name is None:
+                game_names = json.loads(rget('game_names', client_id=client.id) or '[]')
+                if not game_names:
+                    draw_text_centered_on_rectangle(canvas, 'No games available.', 0, 0, self.width, self.height, 35)
+                else:
+                    draw_text_centered_on_rectangle(canvas, '\n'.join([str(game_name) for game_name in game_names]), 0, 0, self.width, self.height, 35)
+
+            elif client.game_name is not None and not client.game_started:
+                active_players = json.loads(rget('active_players', client_id=client.id) or '[]')
+                if not active_players:
+                    draw_text_centered_on_rectangle(canvas, 'No players in game.', 0, 0, self.width, self.height, 35)
+                else:
+                    draw_text_centered_on_rectangle(canvas, '\n'.join([str(player[0]) for player in active_players]), 0, 0, self.width, self.height, 35)
+
             self.canvas.update()
 
         pygame.quit()
@@ -520,12 +521,12 @@ class GameState:
 game_state_snapshots: list[str] = [json.dumps(GameState([], []).to_json())]
 
 
-def get_game_state_snapshots(*, client_id: Optional[int] = None) -> list[str]:
+def get_game_state_snapshots(*, client_id: Optional[int] = None, game_name: Optional[str] = None) -> list[str]:
     if client_id is not None:
         return game_state_snapshots
     else:
         return (json.loads(raw_game_state_snapshots)
-                if (raw_game_state_snapshots := rget('game_state_snapshots', client_id=None)) is not None
+                if (raw_game_state_snapshots := rget('game_state_snapshots', client_id=None, game_name=game_name)) is not None
                 else [json.dumps(GameState([], []).to_json())])
 
 
@@ -597,11 +598,12 @@ def _run_commands_for_player(starting_time: datetime, player: Optional[Player],
                              player_client_id: int,
                              player_number: int,
                              all_projectiles: list[Projectile],
-                             end_time: Optional[datetime] = None) -> Optional[Player]:
+                             end_time: Optional[datetime] = None,
+                             game_name: Optional[str] = None) -> Optional[Player]:
     if end_time is None:
         end_time = datetime.now()
     current_time = starting_time
-    raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id)    
+    raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id, game_name=game_name)    
     for command in commands_for_player:
         if player is None and command.type != CommandType.SPAWN:
             continue
@@ -668,18 +670,18 @@ def lists_are_equal(l1: list[str], l2: list[str]) -> bool:
     return True
 
 
-def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional[int] = None) -> GameState:
+def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional[int] = None, game_name: Optional[str] = None) -> GameState:
     if end_time is None:
         end_time = datetime.now()
-    raw_snaps = get_game_state_snapshots(client_id=client_id)
+    raw_snaps = get_game_state_snapshots(client_id=client_id, game_name=game_name)
     assert len(raw_snaps) > 0
     if client_id is not None:
         raw_snap_to_run_forward_from = raw_snaps[-1]
     else:
         raw_snap_to_run_forward_from = raw_snaps[0]
     snap_to_run_forward_from = GameState.from_json(json.loads(raw_snap_to_run_forward_from))
-    raw_commands_by_player = get_commands_by_player(client_id=client_id)
-    raw_commands_by_projectile = get_commands_by_projectile(client_id=client_id)
+    raw_commands_by_player = get_commands_by_player(client_id=client_id, game_name=game_name)
+    raw_commands_by_projectile = get_commands_by_projectile(client_id=client_id, game_name=game_name)
     player_ids_commands_have_been_run_for: set[int] = set()
     final_players: list[Player] = []
     player: Optional[Player] = None
@@ -705,7 +707,7 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)
         player = _run_commands_for_player(snap_to_run_forward_from.time, player.copy(), commands_for_player, player_client_id, player_number,
-                                          all_projectiles, end_time=end_time)
+                                          all_projectiles, end_time=end_time, game_name=game_name)
         if player:
             final_players.append(player)
 
@@ -715,10 +717,9 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
         player_ids_commands_have_been_run_for.add(player_client_id)
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)        
-        spawn_commands_for_player = [c for c in commands_for_player if c.type == CommandType.SPAWN]
         player_number = get_player_number_from_client_id(player_client_id, client_id=client_id)                                     
         player = _run_commands_for_player(snap_to_run_forward_from.time, None, commands_for_player, player_client_id, player_number,
-                                          all_projectiles, end_time=end_time)
+                                          all_projectiles, end_time=end_time, game_name=game_name)
         if player:
             final_players.append(player)
 
@@ -728,16 +729,16 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
 num_snaps_inferred = 0
 
         
-def infer_and_store_game_state_snap() -> None:
+def infer_and_store_game_state_snap(game_name: str) -> None:
     global num_snaps_inferred
     num_snaps_inferred += 1
-    game_state_snapshots: list[str] = get_game_state_snapshots()
-    new_snapshot = infer_game_state(client_id=None, end_time=datetime.now() - timedelta(seconds=3))
+    game_state_snapshots: list[str] = get_game_state_snapshots(game_name=game_name)
+    new_snapshot = infer_game_state(client_id=None, end_time=datetime.now() - timedelta(seconds=3), game_name=game_name)
     print(f'New snapshot: {new_snapshot.to_json()}')
     game_state_snapshots.append(json.dumps(new_snapshot.to_json()))
     if num_snaps_inferred % 8 == 0:
         print(f'Culling snapshots: {len(game_state_snapshots)}')
         game_state_snapshots = [s for s in game_state_snapshots if datetime.now() - datetime.fromtimestamp(json.loads(s)['time']) < timedelta(seconds=7)]
         print(f'Culling snapshots: {len(game_state_snapshots)}')        
-    rset('game_state_snapshots', json.dumps(game_state_snapshots), client_id=None)
-    rset('most_recent_game_state_snapshot', json.dumps(new_snapshot.to_json()), client_id=None)
+    rset('game_state_snapshots', json.dumps(game_state_snapshots), client_id=None, game_name=game_name)
+    rset('most_recent_game_state_snapshot', json.dumps(new_snapshot.to_json()), client_id=None, game_name=game_name)
