@@ -56,10 +56,10 @@ class Packet:
         return f'<Packet {self.id}: {self.to_str()}>'
 
 
-def _generate_next_packet_id(client_id: Optional[int]) -> int:
-    with redis_lock('generate_next_packet_id_redis_lock', client_id=client_id) if client_id is None else nullcontext():
-        next_packet_id = int(rget('last_packet_id', client_id=client_id) or '0') + 1
-        rset('last_packet_id', next_packet_id, client_id=client_id)
+def _generate_next_packet_id(client_id: Optional[int], game_name: Optional[str] = None) -> int:
+    with redis_lock('generate_next_packet_id_redis_lock', client_id=client_id, game_name=game_name) if client_id is None else nullcontext():
+        next_packet_id = int(rget('last_packet_id', client_id=client_id, game_name=game_name) or '0') + 1
+        rset('last_packet_id', next_packet_id, client_id=client_id, game_name=game_name)
     return next_packet_id
 
 
@@ -95,7 +95,7 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
 def send_with_retry(conn: Any, message: str, client_id: Optional[int], game_name: Optional[str] = None) -> bool:
     if TEST_LAG:
         sleep(TEST_LAG)
-    packet_id = _generate_next_packet_id(client_id=client_id)
+    packet_id = _generate_next_packet_id(client_id=client_id, game_name=game_name)
     packet = Packet(id=packet_id, client_id=client_id, payload=message)
     wait_times = [0.05, 0.1, 0.2, 0.4, 0.8]
     for i, wait_time in enumerate(wait_times):
