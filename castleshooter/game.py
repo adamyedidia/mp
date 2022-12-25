@@ -355,23 +355,39 @@ class Game:
                     elif old_garb == Garb.ARMOR:
                         client_player.hp -= 1
 
-            delayed_score = score.get()
-            actual_score = score.get(actual=True)
-            actual_red_score, actual_blue_score = actual_score
-            game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
+            if client.game_name is not None and client.game_started:
+                delayed_score = score.get()
+                actual_score = score.get(actual=True)
+                actual_red_score, actual_blue_score = actual_score
+                game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
 
-            self.draw_health_state(canvas)
-            self.draw_announcements(canvas)
-            self.draw_big_text(canvas, actual_score, game_over)
-            self.draw_weapon_and_ammo(canvas)
-            self.draw_player_numbers_to_putative_teams(canvas)
-            self.draw_garb(canvas)
-            self.draw_score(canvas, delayed_score, actual_score, game_over)
-            if client_player is not None:
-                x_offset = int(client_player.x - self.width / 2)
-                y_offset = int(client_player.y - self.height / 2)
-                self.draw_edges_of_map(canvas, x_offset, y_offset)
-            self.canvas.update()
+                self.draw_health_state(canvas)
+                self.draw_announcements(canvas)
+                self.draw_big_text(canvas, actual_score, game_over)
+                self.draw_weapon_and_ammo(canvas)
+                self.draw_player_numbers_to_putative_teams(canvas)
+                self.draw_garb(canvas)
+                self.draw_score(canvas, delayed_score, actual_score, game_over)
+                if client_player is not None:
+                    x_offset = int(client_player.x - self.width / 2)
+                    y_offset = int(client_player.y - self.height / 2)
+                    self.draw_edges_of_map(canvas, x_offset, y_offset)
+                self.canvas.update()
+
+            elif client.game_name is None:
+                game_names = json.loads(rget('game_names', client_id=client.id) or '[]')
+                if not game_names:
+                    draw_text_centered_on_rectangle(canvas, 'No games available.', 0, 0, self.width, self.height, 35)
+                else:
+                    draw_text_centered_on_rectangle(canvas, '\n'.join([str(game_name) for game_name in game_names]), 0, 0, self.width, self.height, 35)
+
+            elif client.game_name is not None and not client.game_started:
+                active_players = json.loads(rget('active_players', client_id=client.id) or '[]')
+                if not active_players:
+                    draw_text_centered_on_rectangle(canvas, 'No players in game.', 0, 0, self.width, self.height, 35)
+                else:
+                    draw_text_centered_on_rectangle(canvas, '\n'.join([str(player[0]) for player in active_players]), 0, 0, self.width, self.height, 35)
+
 
         pygame.quit()
 

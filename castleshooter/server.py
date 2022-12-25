@@ -250,6 +250,8 @@ def _handle_outgoing_active_players_connection(connection: Connection, game_name
 
 
 def _create_game_state_snaps(game_name: str) -> None:
+    if game_name == SPECIAL_LOBBY_MANAGER_GAME_NAME:
+        return
     while True:
         game.infer_and_store_game_state_snap(game_name)
 
@@ -268,31 +270,14 @@ def _create_game_state_snaps(game_name: str) -> None:
     #     sleep(1)
 
 
-def server_loop(game_name: Optional[str] = None) -> None:
+def server_loop(game_name: str) -> None:
     flushall()
     active_connections_by_id: dict[int, Connection] = {}
 
     game_state = GameState()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    # TODO replace this with something real
-    player_number_vs_client_id_mapping = [
-        (1, 101),
-        (2, 102),
-        (3, 103),
-        (4, 104),
-        (5, 105),
-        (6, 106),
-        (7, 107),
-        (8, 108),                                
-    ]
-
-    for player_number, client_id in player_number_vs_client_id_mapping:
-        rset(f'player_number:{client_id}', player_number, client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)
-        rset(f'client_id:{player_number}', client_id, client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)
     
-
-    start_new_thread(_create_game_state_snaps, tuple([]))
+    start_new_thread(_create_game_state_snaps, (game_name,))
     try:
         s.bind((socket.gethostbyname(socket.gethostname()), PORT))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -303,14 +288,14 @@ def server_loop(game_name: Optional[str] = None) -> None:
             conn, addr = s.accept()
             print('New connection!')
             new_connection_id = _get_new_connection_id(active_connections_by_id)
-            new_team = get_team_for_client_id(new_connection_id)
             connection = Connection(new_connection_id, conn, addr)
             active_connections_by_id[new_connection_id] = connection
             game_state.set_active_players(active_connections_by_id, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)
             
             sleep(0.01)
             print(f'A new client has connected! ID: {new_connection_id}')
-            start_new_thread(send_with_retry, (conn, f'client_id|{new_connection_id}|{new_team.value}', None))
+            start_new_thread(send_with_retry, (conn, f'client_id|{new_connection_id}', None))
+            start_new_thread(send_with_retry, (conn, f'game_names|{rget("game_names", client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME) or "{}"}', None))
             print(f'Done sending client id of {new_connection_id}!')
             sleep(0.001)
 
@@ -324,4 +309,4 @@ def server_loop(game_name: Optional[str] = None) -> None:
 
 
 if __name__ == '__main__':
-    server_loop()
+    server_loop(game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)
