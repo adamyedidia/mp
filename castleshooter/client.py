@@ -34,10 +34,8 @@ def get_game() -> Optional[Game]:
 def start_up_game(socket: Any) -> None:
     print('starting up game!')
     assert client.id is not None
-    assert client.team is not None
     sleep(0.5)
-    print('Sending the spawn command!')
-    send_spawn_command(socket, 300, 300, client.team, client_id=client.id)    
+    print('Sending the spawn command!')  
     global game
     game = Game(750, 750, client, socket)
     start_new_thread(run_spontaneous_game_processes, (game,))
@@ -46,10 +44,9 @@ def start_up_game(socket: Any) -> None:
 
 def _handle_client_id_packet(payload: str) -> bool:
     if payload.startswith('client_id|') and client.id in [None, -1]:
-        _, raw_client_id, team = payload.split('|')
-        print(f'setting client id to {raw_client_id} and team to {team}')
+        _, raw_client_id = payload.split('|')
+        print(f'setting client id to {raw_client_id}')
         client.set_id(int(raw_client_id))
-        client.set_team(Team(team))
         return True
     return False    
 
@@ -195,7 +192,18 @@ def _handle_payload_from_server(payload: str) -> None:
                                        if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
                 commands_by_projectile[projectile_id] = [json.dumps(c.to_json()) for c in commands_for_projectile]    
 
+        if 'client_id_to_player_number' in key:
+            client_id_to_player_number = json.loads(data)
 
+            for client_id, player_number in client_id_to_player_number.items():
+                rset(f'player_number:{client_id}', player_number, client_id=client.id)
+                rset(f'client_id:{player_number}', client_id, client_id=client.id)
+
+        if 'active_players' in key:
+            rset('active_players', data, client_id=client.id)
+
+        if 'game_names' in key:
+            rset('game_names', data, client_id=client.id)
 
 stored_data: list[str] = []
 

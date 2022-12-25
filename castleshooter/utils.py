@@ -5,6 +5,7 @@ import pygame
 MAX_GAME_STATE_SNAPSHOTS = 5
 SNAPSHOTS_CREATED_EVERY = 1
 LOG_CUTOFF = 1000
+SPECIAL_LOBBY_MANAGER_GAME_NAME = 'lobby_manager'
 
 
 def to_optional_str(val: Any) -> Optional[str]:

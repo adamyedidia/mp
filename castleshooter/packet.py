@@ -56,10 +56,10 @@ class Packet:
         return f'<Packet {self.id}: {self.to_str()}>'
 
 
-def _generate_next_packet_id(client_id: Optional[int]) -> int:
-    with redis_lock('generate_next_packet_id_redis_lock', client_id=client_id) if client_id is None else nullcontext():
-        next_packet_id = int(rget('last_packet_id', client_id=client_id) or '0') + 1
-        rset('last_packet_id', next_packet_id, client_id=client_id)
+def _generate_next_packet_id(client_id: Optional[int], game_name: Optional[str] = None) -> int:
+    with redis_lock('generate_next_packet_id_redis_lock', client_id=client_id, game_name=game_name) if client_id is None else nullcontext():
+        next_packet_id = int(rget('last_packet_id', client_id=client_id, game_name=game_name) or '0') + 1
+        rset('last_packet_id', next_packet_id, client_id=client_id, game_name=game_name)
     return next_packet_id
 
 
@@ -74,7 +74,7 @@ def packet_handled_redis_key(packet_id: int, *, for_client: Optional[int]) -> st
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
 def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *, 
-                           client_id: Optional[int]) -> bool:
+                           client_id: Optional[int], game_name: Optional[str] = None) -> bool:
     packet_id = packet.id
     assert packet_id is not None
     # print(f'Sending {packet}')
@@ -86,20 +86,20 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
 
     # We're relying on a different process to listen for acks and write to redis when one is seen
     ack_redis_key = packet_ack_redis_key(packet_id)
-    if rget(ack_redis_key, client_id=client_id):
+    if rget(ack_redis_key, client_id=client_id, game_name=game_name):
         return True
     return False
 
 
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
-def send_with_retry(conn: Any, message: str, client_id: Optional[int]) -> bool:
+def send_with_retry(conn: Any, message: str, client_id: Optional[int], game_name: Optional[str] = None) -> bool:
     if TEST_LAG:
         sleep(TEST_LAG)
-    packet_id = _generate_next_packet_id(client_id=client_id)
+    packet_id = _generate_next_packet_id(client_id=client_id, game_name=game_name)
     packet = Packet(id=packet_id, client_id=client_id, payload=message)
     wait_times = [0.05, 0.1, 0.2, 0.4, 0.8]
     for i, wait_time in enumerate(wait_times):
-        if _send_with_retry_inner(conn, packet, wait_time, client_id=client_id):
+        if _send_with_retry_inner(conn, packet, wait_time, client_id=client_id, game_name=game_name):
             return True
         # debug_msg = f'Did not get a response in {wait_time} for {packet}'
         # if i < len(wait_times) - 1:
@@ -141,7 +141,7 @@ def send_command(conn: Any, command: Command, *, client_id: int) -> Command:
 
 
 def _generate_next_command_id(client_id: Optional[int]) -> int:
-    next_command_id = int(rget('next_command_id', client_id=client_id) or '0') + 1
+    next_command_id = int(rget('next_command_id', client_id=client_id) or '0') + 2
     rset('next_command_id', next_command_id, client_id=client_id)
     return next_command_id
 
@@ -151,10 +151,14 @@ def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> C
                         data={'x': x_pos, 'y': y_pos}), client_id=client_id)
 
 
+def generate_spawn_command(x_pos: int, y_pos: int, team: Team, *, client_id: int) -> Command:
+    return Command(id=_generate_next_command_id(client_id=client_id), 
+                   type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
+                   data={'x': x_pos, 'y': y_pos, 'team': team.value})
+
+
 def send_spawn_command(conn: Any, x_pos: int, y_pos: int, team: Team, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
-                        type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
-                        data={'x': x_pos, 'y': y_pos, 'team': team.value}), client_id=client_id)
+    return send_command(conn, generate_spawn_command(x_pos, y_pos, team, client_id=client_id), client_id=client_id)
 
 
 def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: int) -> Command:
