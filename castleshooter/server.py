@@ -83,7 +83,8 @@ class GameState:
                     active_connections_by_client_id_and_game_name.add(connection_tup)
                     client_ids_to_game_name[packet.client_id] = game_to_join_name
                     start_new_thread(_handle_incoming_connection, (connection, self, game_to_join_name, packet.client_id))
-                    start_new_thread(_handle_outgoing_active_players_connection, (connection, game_to_join_name, packet.client_id))            
+                    start_new_thread(_handle_outgoing_active_players_connection, (connection, game_to_join_name, packet.client_id))       
+                    sleep(0.02)     
                     rset(f'active_players', json.dumps(players_in_game), client_id=None, game_name=game_to_join_name)
 
         elif payload.startswith('leave_game') and game_name == SPECIAL_LOBBY_MANAGER_GAME_NAME:
@@ -100,6 +101,7 @@ class GameState:
                     assert packet.client_id
                     active_connections_by_client_id_and_game_name.remove(connection_tup)
                     client_ids_to_game_name[packet.client_id] = SPECIAL_LOBBY_MANAGER_GAME_NAME
+                    sleep(0.02)
                     rset(f'active_players', json.dumps(players_in_game), client_id=None, game_name=game_to_leave_name)      
 
         elif payload.startswith('host_game') and game_name == SPECIAL_LOBBY_MANAGER_GAME_NAME:
@@ -115,6 +117,7 @@ class GameState:
                     start_new_thread(_handle_incoming_connection, (connection, self, game_to_host_name, packet.client_id))
                     start_new_thread(_handle_outgoing_active_players_connection, (connection, game_to_host_name, packet.client_id))
                     all_game_names[game_to_host_name] = False
+                    sleep(0.02)
                     rset('game_names', json.dumps(all_game_names), client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)
                     rset(f'active_players', json.dumps([[player_name, packet.client_id]]), client_id=None, game_name=game_to_host_name)
 
@@ -163,7 +166,6 @@ class GameState:
             
     def _handle_datum(self, connection: Connection, datum: str, game_name: str) -> None:
         print(f'received: {datum[:LOG_CUTOFF]}\n')
-        print(f'Connection type: {type(connection)}')
         packet = Packet.from_str(datum)
         packet_id = packet.id
         payload = packet.payload
