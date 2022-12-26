@@ -108,6 +108,11 @@ def send_with_retry(conn: Any, message: str, client_id: Optional[int], game_name
     return False
 
 
+def send_with_retry_on_delay(conn: Any, delay: float, message: str, client_id: Optional[int], game_name: Optional[str] = None) -> bool:
+    sleep(delay)
+    return send_with_retry(conn, message, client_id, game_name=game_name)
+
+
 def send_with_test_lag(conn: Any, message: str, lag: float, *, client_id: Optional[int]) -> None:
     sleep(lag)
     packet = Packet(client_id=client_id, payload=message)
