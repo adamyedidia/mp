@@ -154,171 +154,171 @@ class Game:
             x_offset: Optional[int] = None
             y_offset: Optional[int] = None
 
-            # if client.game_name is not None and client.game_started:
-            #     if client_player is not None:
-            #         x_offset = int(client_player.x - self.width / 2)
-            #         y_offset = int(client_player.y - self.height / 2)                
-            #         for event in pygame.event.get():
-            #             pressed = pygame.key.get_pressed()
-            #             if event.type == pygame.QUIT:
-            #                 run = False
+            if client.game_name is not None and client.game_started:
+                if client_player is not None:
+                    x_offset = int(client_player.x - self.width / 2)
+                    y_offset = int(client_player.y - self.height / 2)                
+                    for event in pygame.event.get():
+                        pressed = pygame.key.get_pressed()
+                        if event.type == pygame.QUIT:
+                            run = False
 
-            #             if event.type == pygame.MOUSEBUTTONDOWN:
-            #                 assert client.id is not None
-            #                 send_move_command(self.s, x_pos=event.pos[0] + x_offset, y_pos=event.pos[1] + y_offset, client_id=client.id)
+                        if event.type == pygame.MOUSEBUTTONDOWN:
+                            assert client.id is not None
+                            send_move_command(self.s, x_pos=event.pos[0] + x_offset, y_pos=event.pos[1] + y_offset, client_id=client.id)
 
-            #             if event.type in [pygame.KEYUP, pygame.KEYDOWN]:
-            #                 if event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_RIGHT, pygame.K_RIGHT, 
-            #                                 pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
-            #                     direction = determine_direction_from_keyboard()
-            #                     send_turn_command(self.s, direction, client_id=client.id)
-            #                 elif event.key == pygame.K_SPACE:
-            #                     if pressed[pygame.K_SPACE]:
-            #                         if client_player.weapon == Weapon.BOW and client_player.ammo > 0:
-            #                             mouse_x, mouse_y = pygame.mouse.get_pos()
-            #                             unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
-            #                             arrow_distance = 400
-            #                             arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
-            #                             arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
-            #                             send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, 
-            #                                                         [client.id, *[get_client_id_from_player_number(player_number, client_id=client.id) 
-            #                                                         for player_number in self.player_numbers_to_putative_teams.keys() 
-            #                                                         if self.player_numbers_to_putative_teams.get(player_number) == client.team]], 
-            #                                                         type=ProjectileType.ARROW, client_id=client.id)
-            #                             # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
-            #                             client_player.ammo -= 1
-            #                             if client_player.ammo <= 0:
-            #                                 client_player.weapon = None
-            #                         elif client_player.weapon == Weapon.DAGGER and target is not None:
-            #                             send_lose_hp_command(self.s, client_player.client_id, target.client_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
-            #                             send_teleport_command(self.s, target.x, target.y, client_id=client.id)
-            #                             client_player.weapon = None
-            #                         elif client_player.weapon == Weapon.FLASHLIGHT:
-            #                             mouse_x, mouse_y = pygame.mouse.get_pos()
-            #                             triangle = get_flashlight_triangle(client_player.x, client_player.y, mouse_x + x_offset, mouse_y + y_offset)
+                        if event.type in [pygame.KEYUP, pygame.KEYDOWN]:
+                            if event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_RIGHT, pygame.K_RIGHT, 
+                                            pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
+                                direction = determine_direction_from_keyboard()
+                                send_turn_command(self.s, direction, client_id=client.id)
+                            elif event.key == pygame.K_SPACE:
+                                if pressed[pygame.K_SPACE]:
+                                    if client_player.weapon == Weapon.BOW and client_player.ammo > 0:
+                                        mouse_x, mouse_y = pygame.mouse.get_pos()
+                                        unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
+                                        arrow_distance = 400
+                                        arrow_dest_x = client_player.x + unit_vector_from_player_to_mouse[0] * arrow_distance
+                                        arrow_dest_y = client_player.y + unit_vector_from_player_to_mouse[1] * arrow_distance
+                                        send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, 
+                                                                    [client.id, *[get_client_id_from_player_number(player_number, client_id=client.id) 
+                                                                    for player_number in self.player_numbers_to_putative_teams.keys() 
+                                                                    if self.player_numbers_to_putative_teams.get(player_number) == client.team]], 
+                                                                    type=ProjectileType.ARROW, client_id=client.id)
+                                        # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
+                                        client_player.ammo -= 1
+                                        if client_player.ammo <= 0:
+                                            client_player.weapon = None
+                                    elif client_player.weapon == Weapon.DAGGER and target is not None:
+                                        send_lose_hp_command(self.s, client_player.client_id, target.client_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
+                                        send_teleport_command(self.s, target.x, target.y, client_id=client.id)
+                                        client_player.weapon = None
+                                    elif client_player.weapon == Weapon.FLASHLIGHT:
+                                        mouse_x, mouse_y = pygame.mouse.get_pos()
+                                        triangle = get_flashlight_triangle(client_player.x, client_player.y, mouse_x + x_offset, mouse_y + y_offset)
                                         
-            #                             for player in game_state.players:
-            #                                 if point_in_triangle((player.x, player.y), triangle):
-            #                                     self.player_numbers_to_putative_teams[player.player_number] = player.team
+                                        for player in game_state.players:
+                                            if point_in_triangle((player.x, player.y), triangle):
+                                                self.player_numbers_to_putative_teams[player.player_number] = player.team
 
-            #                             client_player.weapon = None
+                                        client_player.weapon = None
 
-            #                 elif event.key == pygame.K_e:
-            #                     if self.item_target is not None and pressed[pygame.K_e]:
-            #                         del self.items[self.item_target.id]
-            #                         if self.item_target.category == ItemCategory.WEAPON:
-            #                             client_player.weapon = Weapon(self.item_target.type.value)
-            #                             if client_player.weapon == Weapon.BOW:
-            #                                 client_player.ammo = 3
-            #                         elif self.item_target.category == ItemCategory.GARB:
-            #                             old_garb = client_player.garb
-            #                             client_player.garb = Garb(self.item_target.type.value)
-            #                             client_player.garb_picked_up_at = datetime.now()
-            #                             if client_player.garb == Garb.BOOTS:
-            #                                 send_set_speed_command(self.s, 300, client_id=client.id)
-            #                             elif client_player.garb == Garb.ARMOR and old_garb != Garb.ARMOR:
-            #                                 client_player.hp += 1
+                            elif event.key == pygame.K_e:
+                                if self.item_target is not None and pressed[pygame.K_e]:
+                                    del self.items[self.item_target.id]
+                                    if self.item_target.category == ItemCategory.WEAPON:
+                                        client_player.weapon = Weapon(self.item_target.type.value)
+                                        if client_player.weapon == Weapon.BOW:
+                                            client_player.ammo = 3
+                                    elif self.item_target.category == ItemCategory.GARB:
+                                        old_garb = client_player.garb
+                                        client_player.garb = Garb(self.item_target.type.value)
+                                        client_player.garb_picked_up_at = datetime.now()
+                                        if client_player.garb == Garb.BOOTS:
+                                            send_set_speed_command(self.s, 300, client_id=client.id)
+                                        elif client_player.garb == Garb.ARMOR and old_garb != Garb.ARMOR:
+                                            client_player.hp += 1
                                         
-            #                             if old_garb == Garb.BOOTS and client_player.garb != Garb.BOOTS:
-            #                                 send_set_speed_command(self.s, 200, client_id=client.id)
-            #                             elif old_garb == Garb.ARMOR and client_player.garb != Garb.ARMOR:
-            #                                 client_player.hp -= 1
+                                        if old_garb == Garb.BOOTS and client_player.garb != Garb.BOOTS:
+                                            send_set_speed_command(self.s, 200, client_id=client.id)
+                                        elif old_garb == Garb.ARMOR and client_player.garb != Garb.ARMOR:
+                                            client_player.hp -= 1
 
-            #                         self.item_target = None
+                                    self.item_target = None
 
-            #                 elif event.key in [*SHIFT_KEYS, *NUMBER_KEYS.values()]:
-            #                     shift_pressed = False
-            #                     number_pressed: Optional[int] = None
-            #                     for key in SHIFT_KEYS:
-            #                         if pressed[key]:
-            #                             shift_pressed = True
-            #                     for number, key in NUMBER_KEYS.items():
-            #                         if pressed[key]:
-            #                             number_pressed = number
-            #                     if shift_pressed and number_pressed is not None and client_player.weapon == Weapon.DAGGER:
-            #                         pressed_target_id = number_pressed
-            #                         for pressed_target in game_state.players:
-            #                             if pressed_target.client_id == pressed_target_id and sqrt((pressed_target.x - client_player.x)**2 + (pressed_target.y - client_player.y)**2) < DAGGER_RANGE:
-            #                                 send_lose_hp_command(self.s, client_player.client_id, pressed_target_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
-            #                                 send_teleport_command(self.s, pressed_target.x, pressed_target.y, client_id=client.id)
-            #                     elif not shift_pressed and number_pressed is not None and client.team is not None:
-            #                         self.player_numbers_to_putative_teams[number_pressed] = rotate_team(self.player_numbers_to_putative_teams.get(number_pressed), client.team)
+                            elif event.key in [*SHIFT_KEYS, *NUMBER_KEYS.values()]:
+                                shift_pressed = False
+                                number_pressed: Optional[int] = None
+                                for key in SHIFT_KEYS:
+                                    if pressed[key]:
+                                        shift_pressed = True
+                                for number, key in NUMBER_KEYS.items():
+                                    if pressed[key]:
+                                        number_pressed = number
+                                if shift_pressed and number_pressed is not None and client_player.weapon == Weapon.DAGGER:
+                                    pressed_target_id = number_pressed
+                                    for pressed_target in game_state.players:
+                                        if pressed_target.client_id == pressed_target_id and sqrt((pressed_target.x - client_player.x)**2 + (pressed_target.y - client_player.y)**2) < DAGGER_RANGE:
+                                            send_lose_hp_command(self.s, client_player.client_id, pressed_target_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=client.id)
+                                            send_teleport_command(self.s, pressed_target.x, pressed_target.y, client_id=client.id)
+                                elif not shift_pressed and number_pressed is not None and client.team is not None:
+                                    self.player_numbers_to_putative_teams[number_pressed] = rotate_team(self.player_numbers_to_putative_teams.get(number_pressed), client.team)
 
-            #                 elif event.key == pygame.K_ESCAPE:
-            #                     run = False
+                            elif event.key == pygame.K_ESCAPE:
+                                run = False
 
-            #         for projectile in game_state.projectiles:
-            #             if projectile_intersects_player(projectile, client_player) and not client.id in projectile.friends:
-            #                 if projectile.type == ProjectileType.ARROW:
-            #                     start_of_arrow_x, start_of_arrow_y = projectile.get_start_of_arrow()
-            #                     send_eat_arrow_command(self.s,
-            #                                         start_of_arrow_x - client_player.x,
-            #                                         start_of_arrow_y - client_player.y,
-            #                                         projectile.x - client_player.x,
-            #                                         projectile.y - client_player.y,
-            #                                         client_id=client.id)
-            #                     send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
-            #                     client_player.hp -= 1
-            #                     verb = death_reason_to_verb(DeathReason.ARROW)
-            #                     self.maybe_die(client_player, verb, projectile.player_id)
+                    for projectile in game_state.projectiles:
+                        if projectile_intersects_player(projectile, client_player) and not client.id in projectile.friends:
+                            if projectile.type == ProjectileType.ARROW:
+                                start_of_arrow_x, start_of_arrow_y = projectile.get_start_of_arrow()
+                                send_eat_arrow_command(self.s,
+                                                    start_of_arrow_x - client_player.x,
+                                                    start_of_arrow_y - client_player.y,
+                                                    projectile.x - client_player.x,
+                                                    projectile.y - client_player.y,
+                                                    client_id=client.id)
+                                send_remove_projectile_command(self.s, projectile.id, client_id=client.id)
+                                client_player.hp -= 1
+                                verb = death_reason_to_verb(DeathReason.ARROW)
+                                self.maybe_die(client_player, verb, projectile.player_id)
 
-            #         self.target = None
-            #         min_distance = DAGGER_RANGE
-            #         if client_player.weapon == Weapon.DAGGER:
-            #             for possible_target in game_state.players:
-            #                 if possible_target.client_id != client_player.client_id and self.player_numbers_to_putative_teams.get(possible_target.player_number) != client.team:
-            #                     distance = sqrt((possible_target.x - client_player.x)**2 + (possible_target.y - client_player.y)**2)
-            #                     if distance < min_distance:
-            #                         self.target = possible_target
-            #                         min_distance = distance 
+                    self.target = None
+                    min_distance = DAGGER_RANGE
+                    if client_player.weapon == Weapon.DAGGER:
+                        for possible_target in game_state.players:
+                            if possible_target.client_id != client_player.client_id and self.player_numbers_to_putative_teams.get(possible_target.player_number) != client.team:
+                                distance = sqrt((possible_target.x - client_player.x)**2 + (possible_target.y - client_player.y)**2)
+                                if distance < min_distance:
+                                    self.target = possible_target
+                                    min_distance = distance 
 
-            #         self.item_target = None
-            #         min_distance = DAGGER_RANGE                    
-            #         for possible_item_target in game_items.values():
-            #             distance = sqrt((possible_item_target.x - client_player.x)**2 + (possible_item_target.y - client_player.y)**2)
-            #             if distance < min_distance:
-            #                 self.item_target = possible_item_target
-            #                 min_distance = distance 
+                    self.item_target = None
+                    min_distance = DAGGER_RANGE                    
+                    for possible_item_target in game_items.values():
+                        distance = sqrt((possible_item_target.x - client_player.x)**2 + (possible_item_target.y - client_player.y)**2)
+                        if distance < min_distance:
+                            self.item_target = possible_item_target
+                            min_distance = distance 
 
-            #     else:
-            #         for event in pygame.event.get():
-            #             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-            #                 assert client.team
-            #                 send_spawn_command(self.s, random.randint(1, GAME_WIDTH - 1), random.randint(1, GAME_HEIGHT - 1), client.team, client_id=client.id)
+                else:
+                    for event in pygame.event.get():
+                        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                            assert client.team
+                            send_spawn_command(self.s, random.randint(1, GAME_WIDTH - 1), random.randint(1, GAME_HEIGHT - 1), client.team, client_id=client.id)
             
-            # elif client.game_name is not None and not client.game_started:
-            #     for event in pygame.event.get():
-            #         if event.type == pygame.KEYDOWN:
-            #             key_name = pygame.key.name(event.key)
-            #             if len(key_name) == 1 and key_name in 'abcdefghijklmnopqrstuvwxyz':
-            #                 if self.lobby_input_focus == LobbyInputFocus.GAME_NAME_INPUT:
-            #                     self.game_name_input += key_name
-            #                 elif self.lobby_input_focus == LobbyInputFocus.PLAYER_NAME_INPUT:
-            #                     self.player_name_input += key_name
-            #                 elif key_name == 'j':
-            #                     send_with_retry(self.s, f'join_game|{self.player_name_input}|{self.game_name_input}', client_id=client.id)
-            #                 elif key_name == 'h':
-            #                     send_with_retry(self.s, f'host_game|{self.player_name_input}|{self.game_name_input}', client_id=client.id)
-            #             elif key_name == 'backspace':
-            #                 if self.lobby_input_focus == LobbyInputFocus.GAME_NAME_INPUT:
-            #                     self.game_name_input = self.game_name_input[:-1]
-            #                 elif self.lobby_input_focus == LobbyInputFocus.PLAYER_NAME_INPUT:
-            #                     self.player_name_input = self.player_name_input[:-1]
-            #         elif event.type == pygame.MOUSEBUTTONDOWN:
-            #             mouse_x = event.pos[0]
-            #             mouse_y = event.pos[1]
-            #             if mouse_x > 200 and mouse_x < 400 and mouse_y > 0 and mouse_y < 50:
-            #                 self.lobby_input_focus = LobbyInputFocus.PLAYER_NAME_INPUT
-            #             elif mouse_x > 200 and mouse_x < 400 and mouse_y > 50 and mouse_y < 100:
-            #                 self.lobby_input_focus = LobbyInputFocus.GAME_NAME_INPUT
-            #             else:
-            #                 self.lobby_input_focus = None
+            elif client.game_name is not None and not client.game_started:
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        key_name = pygame.key.name(event.key)
+                        if len(key_name) == 1 and key_name in 'abcdefghijklmnopqrstuvwxyz':
+                            if self.lobby_input_focus == LobbyInputFocus.GAME_NAME_INPUT:
+                                self.game_name_input += key_name
+                            elif self.lobby_input_focus == LobbyInputFocus.PLAYER_NAME_INPUT:
+                                self.player_name_input += key_name
+                            elif key_name == 'j':
+                                send_with_retry(self.s, f'join_game|{self.player_name_input}|{self.game_name_input}', client_id=client.id)
+                            elif key_name == 'h':
+                                send_with_retry(self.s, f'host_game|{self.player_name_input}|{self.game_name_input}', client_id=client.id)
+                        elif key_name == 'backspace':
+                            if self.lobby_input_focus == LobbyInputFocus.GAME_NAME_INPUT:
+                                self.game_name_input = self.game_name_input[:-1]
+                            elif self.lobby_input_focus == LobbyInputFocus.PLAYER_NAME_INPUT:
+                                self.player_name_input = self.player_name_input[:-1]
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        mouse_x = event.pos[0]
+                        mouse_y = event.pos[1]
+                        if mouse_x > 200 and mouse_x < 400 and mouse_y > 0 and mouse_y < 50:
+                            self.lobby_input_focus = LobbyInputFocus.PLAYER_NAME_INPUT
+                        elif mouse_x > 200 and mouse_x < 400 and mouse_y > 50 and mouse_y < 100:
+                            self.lobby_input_focus = LobbyInputFocus.GAME_NAME_INPUT
+                        else:
+                            self.lobby_input_focus = None
 
-            # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
-            #     if keys[input]:
-            #         self.player.move(input)
-            #         self.player.make_valid_position(self.width, self.height)
-            #         self.send_data()
+            for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
+                if keys[input]:
+                    self.player.move(input)
+                    self.player.make_valid_position(self.width, self.height)
+                    self.send_data()
 
             # Update Canvas
             if client_player is not None:
