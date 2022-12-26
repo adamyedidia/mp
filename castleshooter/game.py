@@ -285,8 +285,8 @@ class Game:
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                             assert client.team
                             send_spawn_command(self.s, random.randint(1, GAME_WIDTH - 1), random.randint(1, GAME_HEIGHT - 1), client.team, client_id=client.id)
-            
-            elif client.game_name is not None and not client.game_started:
+        
+            elif client.game_name is None and not client.game_started:
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN:
                         key_name = pygame.key.name(event.key)
@@ -314,11 +314,11 @@ class Game:
                         else:
                             self.lobby_input_focus = None
 
-            for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
-                if keys[input]:
-                    self.player.move(input)
-                    self.player.make_valid_position(self.width, self.height)
-                    self.send_data()
+            # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
+            #     if keys[input]:
+            #         self.player.move(input)
+            #         self.player.make_valid_position(self.width, self.height)
+            #         self.send_data()
 
             # Update Canvas
             if client_player is not None:
