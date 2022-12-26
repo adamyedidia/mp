@@ -163,6 +163,7 @@ class GameState:
             
     def _handle_datum(self, connection: Connection, datum: str, game_name: str) -> None:
         print(f'received: {datum[:LOG_CUTOFF]}\n')
+        print(f'Connection type: {type(connection)}')
         packet = Packet.from_str(datum)
         packet_id = packet.id
         payload = packet.payload
