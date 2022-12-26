@@ -297,6 +297,7 @@ class Game:
                                 self.player_name_input += key_name
                             elif key_name == 'j' and self.game_name_input in json.loads(rget('game_names', client_id=client.id) or '{}'):
                                 send_with_retry(self.s, f'join_game|{self.player_name_input}|{self.game_name_input}', client_id=client.id)
+                                client.set_game_name(self.game_name_input)
                             elif key_name == 'h':
                                 send_with_retry(self.s, f'host_game|{self.player_name_input}|{self.game_name_input}', client_id=client.id)
                                 client.set_game_name(self.game_name_input)
