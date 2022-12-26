@@ -229,7 +229,7 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState, g
             print(f'Error decompressing data: {e}')
             data = ''
             sleep(0.02)            
-        game_state.handle_data_from_client(data, connection.conn, game_name=game_name)
+        game_state.handle_data_from_client(data, connection, game_name=game_name)
 
         if game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME and (for_client_id, game_name) not in active_connections_by_client_id_and_game_name:
             print(f'breaking connection: ({for_client_id, game_name})')
