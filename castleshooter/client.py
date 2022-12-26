@@ -202,7 +202,9 @@ def _handle_payload_from_server(payload: str) -> None:
         if 'active_players' in key:
             rset('active_players', data, client_id=client.id)
 
+        print(key)
         if 'game_names' in key:
+            print(f'Setting game_names to {data}')
             rset('game_names', data, client_id=client.id)
 
 stored_data: list[str] = []

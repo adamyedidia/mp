@@ -295,10 +295,11 @@ class Game:
                                 self.game_name_input += key_name
                             elif self.lobby_input_focus == LobbyInputFocus.PLAYER_NAME_INPUT:
                                 self.player_name_input += key_name
-                            elif key_name == 'j':
+                            elif key_name == 'j' and self.game_name_input in json.loads(rget('game_names', client_id=client.id) or '{}'):
                                 send_with_retry(self.s, f'join_game|{self.player_name_input}|{self.game_name_input}', client_id=client.id)
                             elif key_name == 'h':
                                 send_with_retry(self.s, f'host_game|{self.player_name_input}|{self.game_name_input}', client_id=client.id)
+                                client.set_game_name(self.game_name_input)
                         elif key_name == 'backspace':
                             if self.lobby_input_focus == LobbyInputFocus.GAME_NAME_INPUT:
                                 self.game_name_input = self.game_name_input[:-1]
@@ -313,6 +314,10 @@ class Game:
                             self.lobby_input_focus = LobbyInputFocus.GAME_NAME_INPUT
                         else:
                             self.lobby_input_focus = None
+
+            elif client.game_name is not None and not client.game_started:
+                for event in pygame.event.get():
+                    pass
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
@@ -410,7 +415,6 @@ class Game:
                 draw_text_centered_on_rectangle(canvas, self.game_name_input, 200, 50, 200, 50, 25)
                 pygame.draw.rect(canvas, (255,0,0) if self.lobby_input_focus == LobbyInputFocus.PLAYER_NAME_INPUT else (0,0,0), (200, 0, 200, 50), width=2)
                 pygame.draw.rect(canvas, (255,0,0) if self.lobby_input_focus == LobbyInputFocus.GAME_NAME_INPUT else (0,0,0), (200, 50, 200, 50), width=2)
-                self.canvas.update()
 
             elif client.game_name is not None and not client.game_started:
                 active_players = json.loads(rget('active_players', client_id=client.id) or '[]')
@@ -418,6 +422,7 @@ class Game:
                     draw_text_centered_on_rectangle(canvas, 'No players in game.', 0, 0, self.width, self.height, 35)
                 else:
                     draw_text_centered_on_rectangle(canvas, '\n'.join([str(player[0]) for player in active_players]), 0, 0, self.width, self.height, 35)
+
 
             self.canvas.update()
 
