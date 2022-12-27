@@ -208,9 +208,14 @@ def _handle_payload_from_server(payload: str) -> None:
 
         if 'game_started' in key:
             if data == '1':
-                client.set_game_started(True)
+                start_new_thread(_start_game_on_delay, tuple([]))
 
 stored_data: list[str] = []
+
+
+def _start_game_on_delay():
+    sleep(0.5)
+    client.set_game_started(True)
 
 
 def _clear_stored_data(stored_data: list[str]) -> None:
