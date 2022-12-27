@@ -206,6 +206,10 @@ def _handle_payload_from_server(payload: str) -> None:
             print(f'Setting game_names to {data}')
             rset('game_names', data, client_id=client.id)
 
+        if 'game_started' in key:
+            if data == '1':
+                client.set_game_started(True)
+
 stored_data: list[str] = []
 
 

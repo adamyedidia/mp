@@ -25,7 +25,7 @@ _SUBSCRIPTION_KEYS = ['active_players',
                       'commands_by_player',
                       'commands_by_projectile',
                       'client_id_to_player_number',
-                      'game_names']
+                      'game_started']
 
 
 _LOBBY_MANAGER_SUBSCRIPTION_KEYS = ['game_names']
@@ -150,6 +150,7 @@ class GameState:
                         rset(f'player_number:{client_id}', player_number, client_id=None, game_name=game_name)
                         rset(f'client_id:{player_number}', client_id, client_id=None, game_name=game_name)
                         rset('client_id_to_player_number', json.dumps(client_id_to_player_number), client_id=None, game_name=game_name)
+                        rset('game_started', '1', client_id=None, game_name=game_name)
 
                         store_command(Command(1, CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
                                     data={'x_pos': random.randint(1, GAME_WIDTH), 
