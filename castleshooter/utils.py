@@ -51,6 +51,13 @@ def draw_text_centered_on_rectangle(g: pygame.surface.Surface, message: str, x: 
     draw_text_centered_on_rectangle_inner(g, text, x, y, width, height)
 
 
+def draw_text_list(g: pygame.surface.Surface, messages: list[str], x: int, y: int, box_width: int, box_height: int, font_size: int) -> None:
+    current_y = y
+    for message in messages:
+        draw_text_centered_on_rectangle(g, message, x, current_y, box_width, box_height, font_size)
+        current_y += box_height
+
+
 def clamp(lower, x, upper):
     return min(max(lower, x), upper)
 

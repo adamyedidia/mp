@@ -33,7 +33,7 @@ from json.decoder import JSONDecodeError
 
 from utils import (
     MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_rectangle, GAME_HEIGHT, GAME_WIDTH, 
-    clamp, clamp_to_game_x, clamp_to_game_y, MAX_SCORE
+    clamp, clamp_to_game_x, clamp_to_game_y, MAX_SCORE, draw_text_list
 )
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
@@ -406,7 +406,7 @@ class Game:
                 if not game_names:
                     draw_text_centered_on_rectangle(canvas, 'No games available.', 0, 0, self.width, self.height, 35)
                 else:
-                    draw_text_centered_on_rectangle(canvas, '\n'.join([str(game_name) for game_name in game_names.keys()]), 0, 0, self.width, self.height, 35)
+                    draw_text_list(canvas, ['Current games:', '', *game_names.keys()], 200, 300, 200, 50, 35)
 
                 draw_text_centered_on_rectangle(canvas, 'Your name:', 0, 0, 200, 50, 25)
                 draw_text_centered_on_rectangle(canvas, 'Game name:', 0, 50, 200, 50, 25)
@@ -422,7 +422,7 @@ class Game:
                 if not active_players:
                     draw_text_centered_on_rectangle(canvas, 'No players in game.', 0, 0, self.width, self.height, 35)
                 else:
-                    draw_text_centered_on_rectangle(canvas, '\n'.join([str(player[0]) for player in active_players]), 0, 0, self.width, self.height, 35)
+                    draw_text_list(canvas, ['Players in game:', '', *[str(player[0]) for player in active_players]], 200, 300, 200, 50, 35)
 
 
             self.canvas.update()
