@@ -18,6 +18,7 @@ from packet import (
 import game
 import random
 from team import Team
+import traceback
 
 
 _SUBSCRIPTION_KEYS = ['active_players', 
@@ -212,10 +213,12 @@ class GameState:
                             self._handle_datum(connection, ''.join(stored_data), game_name=game_name)
                         except Exception as e2:
                             print(f'Ignoring {joint_datum[:LOG_CUTOFF]} because of exception: {e2}')
+                            traceback.print_exc()
                         else:
                             _clear_stored_data(stored_data)
                     else:
                         print(f'Ignoring {datum[:LOG_CUTOFF]} because of exception: {e1}')
+                        traceback.print_exc()
                 else:
                     _clear_stored_data(stored_data)
 
