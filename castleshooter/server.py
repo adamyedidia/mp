@@ -26,6 +26,7 @@ _SUBSCRIPTION_KEYS = ['active_players',
                       'commands_by_player',
                       'commands_by_projectile',
                       'client_id_to_player_number',
+                      'client_id_to_team',
                       'game_started']
 
 
@@ -157,6 +158,7 @@ class GameState:
                                             'y_pos': random.randint(1, GAME_HEIGHT),
                                             'team': client_id_to_team[client_id].value}), for_client=client_id, client_id=None, game_name=game_name)
 
+                    rset('client_id_to_team', json.dumps({k: v.value for k, v in client_id_to_team.items()}), client_id=None, game_name=game_name)
                     rset('client_id_to_player_number', json.dumps(client_id_to_player_number), client_id=None, game_name=game_name)
                     rset('game_started', '1', client_id=None, game_name=game_name)
                     rset('game_names', json.dumps(all_game_names), client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)

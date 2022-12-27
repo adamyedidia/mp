@@ -104,7 +104,7 @@ def handle_client_changes_for_all_commands(commands_by_player: dict[int, list[st
                         game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
                         print(f'Not game over: {not game_over}')
                         if not game_over:                    
-                            team_to_gain_point = flip_team(game.player_numbers_to_actual_teams[get_player_number_from_client_id(client_id, client_id=client.id)])
+                            team_to_gain_point = flip_team(Team(rget(f'team:{client_id}', client_id=client.id)))
                             print(f'incrementing {team_to_gain_point}\n')                            
                             score.increment(team_to_gain_point, max_delay_seconds=10)
 
@@ -198,6 +198,11 @@ def _handle_payload_from_server(payload: str) -> None:
             for client_id, player_number in client_id_to_player_number.items():
                 rset(f'player_number:{client_id}', player_number, client_id=client.id)
                 rset(f'client_id:{player_number}', client_id, client_id=client.id)
+
+        if 'client_id_to_team' in key:
+            client_id_to_team = json.loads(data)
+            for client_id, team in client_id_to_team.items():
+                rset(f'team:{client_id}', team, client_id=client.id)
 
         if 'active_players' in key:
             rset('active_players', data, client_id=client.id)

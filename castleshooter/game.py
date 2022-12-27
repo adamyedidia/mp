@@ -97,6 +97,26 @@ class LobbyInputFocus(Enum):
     GAME_NAME_INPUT = 'game_name_input'
 
 
+class GameState:
+    def __init__(self, players: list[Player], projectiles: list[Projectile], time: Optional[datetime] = None):
+        self.players = players
+        self.projectiles = projectiles
+        self.time = time if time is not None else datetime.now()
+
+    def to_json(self) -> dict:
+        return {
+            'players': [player.to_json() for player in self.players],
+            'projectiles': [projectile.to_json() for projectile in self.projectiles],
+            'time': datetime.timestamp(self.time),
+        }
+
+    @classmethod
+    def from_json(cls, d: dict) -> 'GameState':
+        return GameState(players=[Player.from_json(p) for p in d['players']], 
+                         projectiles=[Projectile.from_json(p) for p in d['projectiles']],
+                         time=datetime.fromtimestamp(d['time']))
+
+
 class Game:
     def __init__(self, w: int, h: int, client: Client, socket: socket):
         self.width = w
@@ -116,7 +136,6 @@ class Game:
         self.items: dict[int, Item] = {}
         self.item_target: Optional[Item] = None
         self.player_numbers_to_putative_teams: dict[int, Optional[Team]] = {}
-        self.player_numbers_to_actual_teams: dict[int, Team] = {}
         self.player_name_input = ''
         self.game_name_input = ''
         self.lobby_input_focus: Optional[LobbyInputFocus] = None
@@ -135,16 +154,16 @@ class Game:
                 self.player_number = self.client.id if self.client.id is not None else -1
                 continue
 
-            game_state = infer_game_state(client_id=client.id)
-            for player in game_state.players:
-                if player.client_id == client.id:
-                    if self.player is not None:
-                        self.player.update_info_from_inferred_game_state(player)
-                    else:
-                        self.player = player
-
-                # TODO get rid of these once game launching code is properly written
-                self.player_numbers_to_actual_teams[player.client_id] = player.team          
+            if client.game_name is not None and client.game_started:
+                game_state = infer_game_state(client_id=client.id)
+                for player in game_state.players:
+                    if player.client_id == client.id:
+                        if self.player is not None:
+                            self.player.update_info_from_inferred_game_state(player)
+                        else:
+                            self.player = player
+            else:
+                game_state = GameState([], [])
 
             client_player = self.player
             self.canvas.draw_background()
@@ -554,26 +573,6 @@ class Game:
     def draw_score(self, canvas: Any, delayed_score: tuple[int, int], actual_score: tuple[int, int], game_over: bool) -> None:
         score = actual_score if game_over else delayed_score
         draw_score_centered_on_rectangle(canvas, score[0], score[1], 0, 0, self.width, 200, 35)
-
-
-class GameState:
-    def __init__(self, players: list[Player], projectiles: list[Projectile], time: Optional[datetime] = None):
-        self.players = players
-        self.projectiles = projectiles
-        self.time = time if time is not None else datetime.now()
-
-    def to_json(self) -> dict:
-        return {
-            'players': [player.to_json() for player in self.players],
-            'projectiles': [projectile.to_json() for projectile in self.projectiles],
-            'time': datetime.timestamp(self.time),
-        }
-
-    @classmethod
-    def from_json(cls, d: dict) -> 'GameState':
-        return GameState(players=[Player.from_json(p) for p in d['players']], 
-                         projectiles=[Projectile.from_json(p) for p in d['projectiles']],
-                         time=datetime.fromtimestamp(d['time']))
 
 
 game_state_snapshots: list[str] = [json.dumps(GameState([], []).to_json())]
