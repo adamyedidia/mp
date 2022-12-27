@@ -24,7 +24,8 @@ _SUBSCRIPTION_KEYS = ['active_players',
                       'most_recent_game_state_snapshot',
                       'commands_by_player',
                       'commands_by_projectile',
-                      'client_id_to_player_number']
+                      'client_id_to_player_number',
+                      'game_names']
 
 
 _LOBBY_MANAGER_SUBSCRIPTION_KEYS = ['game_names']

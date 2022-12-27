@@ -318,7 +318,8 @@ class Game:
 
             elif client.game_name is not None and not client.game_started:
                 for event in pygame.event.get():
-                    pass
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_s:
+                        send_with_retry(self.s, f'start_game', client_id=client.id)
 
             # for input in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
             #     if keys[input]:
@@ -423,6 +424,10 @@ class Game:
                     draw_text_centered_on_rectangle(canvas, 'No players in game.', 0, 0, self.width, self.height, 35)
                 else:
                     draw_text_list(canvas, ['Players in game:', '', *[str(player[0]) for player in active_players]], 200, 300, 200, 50, 35)
+                game_names = json.loads(rget('game_names', client_id=client.id) or '{}')
+
+                if game_names[client.game_name]:
+                    client.set_game_started(True)
 
 
             self.canvas.update()
