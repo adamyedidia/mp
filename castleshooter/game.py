@@ -447,10 +447,6 @@ class Game:
                     draw_text_list(canvas, ['Players in game:', '', *[str(player[0]) for player in active_players]], 200, 300, 200, 50, 35)
                 game_names = json.loads(rget('game_names', client_id=client.id) or '{}')
 
-                if game_names[client.game_name]:
-                    client.set_game_started(True)
-
-
             self.canvas.update()
 
         pygame.quit()
@@ -776,7 +772,7 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
         player_ids_commands_have_been_run_for.add(player_client_id)
         commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_for_player], 
                                      key=lambda c: c.time)        
-        player_number = get_player_number_from_client_id(player_client_id, client_id=client_id)                                     
+        player_number = get_player_number_from_client_id(player_client_id, client_id=client_id, game_name=game_name)                                     
         player = _run_commands_for_player(snap_to_run_forward_from.time, None, commands_for_player, player_client_id, player_number,
                                           all_projectiles, end_time=end_time, game_name=game_name)
         if player:
