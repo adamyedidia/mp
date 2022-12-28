@@ -154,6 +154,8 @@ class Game:
                 self.player_number = self.client.id if self.client.id is not None else -1
                 continue
 
+            # print(f'game started: {client.game_started}')
+
             if client.game_name is not None and client.game_started:
                 game_state = infer_game_state(client_id=client.id)
                 for player in game_state.players:
