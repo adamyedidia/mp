@@ -174,7 +174,7 @@ class GameState:
             if all_game_names[game_name]:
                 _, data = payload.split('|')
                 assert packet.client_id is not None
-                store_command(Command.from_json(json.loads(data)), client_id=None, for_client=packet.client_id)
+                store_command(Command.from_json(json.loads(data)), client_id=None, for_client=packet.client_id, game_name=game_name)
             
     def _handle_datum(self, connection: Connection, datum: str, game_name: str) -> None:
         print(f'received: {datum[:LOG_CUTOFF]}\n')
