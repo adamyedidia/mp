@@ -250,7 +250,7 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState, g
 
 def _handle_outgoing_active_players_connection(connection: Connection, game_name: str, for_client_id: int) -> None:
     def _handle_change(channel: str, value: Optional[str]) -> None:
-        print(f'Broadcasting: {channel}|{value}')
+        print(f'Broadcasting: {channel}|{value} to {game_name}')
         send_without_retry(connection.conn, f'{channel}|{value}', client_id=None)
     
     def _break_when() -> bool:
