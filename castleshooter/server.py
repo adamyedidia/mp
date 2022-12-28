@@ -156,8 +156,8 @@ class GameState:
 
                         sleep(0.1)
                         store_command(Command(1, CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
-                                    data={'x_pos': random.randint(1, GAME_WIDTH), 
-                                            'y_pos': random.randint(1, GAME_HEIGHT),
+                                    data={'x': random.randint(1, GAME_WIDTH), 
+                                            'y': random.randint(1, GAME_HEIGHT),
                                             'team': client_id_to_team[client_id].value}), for_client=client_id, client_id=None, game_name=game_name)
 
                     sleep(0.1)
