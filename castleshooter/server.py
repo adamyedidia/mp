@@ -119,7 +119,6 @@ class GameState:
                     client_ids_to_game_name[packet.client_id] = game_to_host_name
                     start_new_thread(_handle_incoming_connection, (connection, self, game_to_host_name, packet.client_id))
                     start_new_thread(_handle_outgoing_active_players_connection, (connection, game_to_host_name, packet.client_id))
-                    start_new_thread(_create_game_state_snaps, (game_name,))
                     all_game_names[game_to_host_name] = False
                     sleep(0.02)
                     rset('game_names', json.dumps(all_game_names), client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)
@@ -140,6 +139,7 @@ class GameState:
 
                     print(players_in_game)
                     print(f'game name: {game_name}')
+                    start_new_thread(_create_game_state_snaps, (game_name,))                    
                     client_ids_in_game = [player_info[1] for player_info in players_in_game]
                     random.shuffle(client_ids_in_game)
                     client_id_to_team: dict[int, Team] = {}
