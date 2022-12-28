@@ -38,7 +38,6 @@ def get_player_number_from_client_id(from_client_id: int, *, client_id: Optional
 
 
 def get_client_id_from_player_number(player_number: int, *, client_id: int, game_name: Optional[str] = None) -> int:
-    print(player_number)
     assert client_id is not None
     raw_client_id = rget(f'client_id:{player_number}', client_id=client_id, game_name=game_name)
     assert raw_client_id is not None
