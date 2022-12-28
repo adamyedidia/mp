@@ -138,6 +138,7 @@ class GameState:
                         players_in_game.append(['', 10000 + i])
 
                     print(players_in_game)
+                    print(f'game name: {game_name}')
                     client_ids_in_game = [player_info[1] for player_info in players_in_game]
                     random.shuffle(client_ids_in_game)
                     client_id_to_team: dict[int, Team] = {}
