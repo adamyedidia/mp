@@ -219,7 +219,7 @@ stored_data: list[str] = []
 
 
 def _start_game_on_delay():
-    sleep(0.5)
+    sleep(3)
     client.set_game_started(True)
 
 
