@@ -205,7 +205,7 @@ def _handle_payload_from_server(payload: str) -> None:
             client_id_to_team = json.loads(data)
             for client_id, team in client_id_to_team.items():
                 rset(f'team:{client_id}', team, client_id=client.id)
-                if client_id == client.id:
+                if int(client_id) == int(client.id):
                     print(f'Setting team to {team}')
                     client.set_team(Team(team))
 

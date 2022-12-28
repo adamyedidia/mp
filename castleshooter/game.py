@@ -582,7 +582,7 @@ def get_game_state_snapshots(*, client_id: Optional[int] = None, game_name: Opti
     else:
         return (json.loads(raw_game_state_snapshots)
                 if (raw_game_state_snapshots := rget('game_state_snapshots', client_id=None, game_name=game_name)) is not None
-                else [json.dumps(GameState([], [], time=datetime.now() - timedelta(seconds=5)).to_json())])
+                else [json.dumps(GameState([], [], time=datetime.now() - timedelta(seconds=2)).to_json())])
 
 
 def _move_projectile(projectile: Optional[Projectile], *, prev_time: datetime, next_time: datetime) -> Optional[Projectile]:
