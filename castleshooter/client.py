@@ -199,6 +199,8 @@ def _handle_payload_from_server(payload: str) -> None:
                 rset(f'player_number:{client_id}', player_number, client_id=client.id)
                 rset(f'client_id:{player_number}', client_id, client_id=client.id)
 
+            start_new_thread(_start_game_on_delay, tuple([]))
+
         if 'client_id_to_team' in key:
             client_id_to_team = json.loads(data)
             for client_id, team in client_id_to_team.items():
@@ -212,8 +214,10 @@ def _handle_payload_from_server(payload: str) -> None:
             rset('game_names', data, client_id=client.id)
 
         if 'game_started' in key:
-            if data == '1':
-                start_new_thread(_start_game_on_delay, tuple([]))
+            # if data == '1':
+            #     start_new_thread(_start_game_on_delay, tuple([]))
+
+            pass
 
 stored_data: list[str] = []
 
