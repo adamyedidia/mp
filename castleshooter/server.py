@@ -265,9 +265,12 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState, g
             print(f'breaking connection: ({for_client_id, game_name})')
             break
 
-        if game_name == SPECIAL_LOBBY_MANAGER_GAME_NAME and for_client_id in [x[0] for x in active_connections_by_client_id_and_game_name]:
-            print(f'breaking connection: ({for_client_id, game_name})')
-            break
+        print(active_connections_by_client_id_and_game_name)
+        if game_name == SPECIAL_LOBBY_MANAGER_GAME_NAME:
+            for client_id, for_game_name in active_connections_by_client_id_and_game_name:
+                if game_name != for_game_name and client_id == for_client_id:
+                    print(f'breaking connection: ({for_client_id, game_name})')
+                    return
 
 
 def _handle_outgoing_active_players_connection(connection: Connection, game_name: str, for_client_id: int) -> None:
