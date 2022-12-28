@@ -71,7 +71,7 @@ class GameState:
         active_players = rget('active_players', client_id=None, game_name=game_name) or ''
         return [int(i) for i in active_players.split(',')]
 
-    def handle_payload_from_client(self, connection: Connection, payload: str, packet: Packet, game_name: str):
+    def handle_payload_from_client(self, connection: Connection, payload: str, packet: Packet, game_name: str) -> bool:
         
         # Only the lobby manager should care about these packets
 
@@ -89,6 +89,7 @@ class GameState:
                     start_new_thread(_handle_outgoing_active_players_connection, (connection, game_to_join_name, packet.client_id))       
                     sleep(0.02)     
                     rset(f'active_players', json.dumps(players_in_game), client_id=None, game_name=game_to_join_name)
+            return True
 
         elif payload.startswith('leave_game') and game_name == SPECIAL_LOBBY_MANAGER_GAME_NAME:
             with redis_lock(_GAME_NAMES_LOCK_REDIS_KEY, client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME):
@@ -106,6 +107,7 @@ class GameState:
                     client_ids_to_game_name[packet.client_id] = SPECIAL_LOBBY_MANAGER_GAME_NAME
                     sleep(0.02)
                     rset(f'active_players', json.dumps(players_in_game), client_id=None, game_name=game_to_leave_name)      
+            return True
 
         elif payload.startswith('host_game') and game_name == SPECIAL_LOBBY_MANAGER_GAME_NAME:
             with redis_lock(_GAME_NAMES_LOCK_REDIS_KEY, client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME):
@@ -123,6 +125,7 @@ class GameState:
                     sleep(0.02)
                     rset('game_names', json.dumps(all_game_names), client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)
                     rset(f'active_players', json.dumps([[player_name, packet.client_id]]), client_id=None, game_name=game_to_host_name)
+            return True
 
         # End "Only the lobby manager should care about these packets"
 
@@ -170,6 +173,7 @@ class GameState:
                                             'team': client_id_to_team[client_id].value}), for_client=client_id, client_id=None, game_name=game_name)
                         sleep(0.1)                                            
                     start_new_thread(_create_game_state_snaps, (game_name,))
+            return True
 
         elif payload.startswith('command') and game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME:
             all_game_names = _get_game_names()
@@ -178,6 +182,9 @@ class GameState:
                 assert packet.client_id is not None
                 print(f'Storing command {data} for game {game_name}')
                 store_command(Command.from_json(json.loads(data)), client_id=None, for_client=packet.client_id, game_name=game_name)
+            return True
+
+        return False
             
     def _handle_datum(self, connection: Connection, datum: str, game_name: str) -> None:
         print(f'received: {datum[:LOG_CUTOFF]}\n')
@@ -201,9 +208,12 @@ class GameState:
                 # Want to make sure not to handle the same packet twice due to a re-send, 
                 # if our ack didn't get through
                 if not rget(handled_redis_key, client_id=None, game_name=game_name):
-                    self.handle_payload_from_client(connection, payload, packet, game_name=game_name)
-                    send_ack(connection.conn, packet_id)
-                    rset(handled_redis_key, '1', client_id=None, game_name=game_name)
+                    handled = self.handle_payload_from_client(connection, payload, packet, game_name=game_name)
+                    if handled:
+                        send_ack(connection.conn, packet_id)
+                        rset(handled_redis_key, '1', client_id=None, game_name=game_name)
+                    else:
+                        print(f"Ignoring {packet} because we're not supposed to handle this one")
                 else:
                     print(f'Ignoring {packet} because this packet has already been handled')
 
