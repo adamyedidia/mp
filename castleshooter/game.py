@@ -789,7 +789,7 @@ def infer_and_store_game_state_snap(game_name: str) -> None:
     num_snaps_inferred += 1
     game_state_snapshots: list[str] = get_game_state_snapshots(game_name=game_name)
     new_snapshot = infer_game_state(client_id=None, end_time=datetime.now() - timedelta(seconds=3), game_name=game_name)
-    print(f'New snapshot: {new_snapshot.to_json()}')
+    # print(f'New snapshot: {new_snapshot.to_json()}')
     game_state_snapshots.append(json.dumps(new_snapshot.to_json()))
     if num_snaps_inferred % 8 == 0:
         print(f'Culling snapshots: {len(game_state_snapshots)}')
