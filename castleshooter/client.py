@@ -205,6 +205,8 @@ def _handle_payload_from_server(payload: str) -> None:
             client_id_to_team = json.loads(data)
             for client_id, team in client_id_to_team.items():
                 rset(f'team:{client_id}', team, client_id=client.id)
+                if client_id == client.id:
+                    client.set_team(Team(team))
 
         if 'active_players' in key:
             rset('active_players', data, client_id=client.id)
