@@ -97,7 +97,7 @@ def send_with_retry(conn: Any, message: str, client_id: Optional[int], game_name
         sleep(TEST_LAG)
     packet_id = _generate_next_packet_id(client_id=client_id, game_name=game_name)
     packet = Packet(id=packet_id, client_id=client_id, payload=message)
-    wait_times = [0.05, 0.1, 0.2, 0.4, 0.8]
+    wait_times = [0.2, 0.4, 0.8]
     for i, wait_time in enumerate(wait_times):
         if _send_with_retry_inner(conn, packet, wait_time, client_id=client_id, game_name=game_name):
             return True
