@@ -265,6 +265,10 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState, g
             print(f'breaking connection: ({for_client_id, game_name})')
             break
 
+        if game_name == SPECIAL_LOBBY_MANAGER_GAME_NAME and (for_client_id, game_name) in active_connections_by_client_id_and_game_name:
+            print(f'breaking connection: ({for_client_id, game_name})')
+            break
+
 
 def _handle_outgoing_active_players_connection(connection: Connection, game_name: str, for_client_id: int) -> None:
     def _handle_change(channel: str, value: Optional[str]) -> None:

@@ -96,16 +96,13 @@ def handle_client_changes_for_all_commands(commands_by_player: dict[int, list[st
             for raw_command in raw_commands:
                 command = Command.from_json(json.loads(raw_command))
                 if command.id not in [c.id for c in game.commands_handled]:
-                    print(f'New command detected: {command.to_json()}\n')
                     if command.type == CommandType.DIE:
                         global score
                         actual_score = score.get()
                         actual_red_score, actual_blue_score = actual_score
                         game_over = actual_red_score >= MAX_SCORE or actual_blue_score >= MAX_SCORE
-                        print(f'Not game over: {not game_over}')
                         if not game_over:                    
                             team_to_gain_point = flip_team(Team(rget(f'team:{client_id}', client_id=client.id)))
-                            print(f'incrementing {team_to_gain_point}\n')                            
                             score.increment(team_to_gain_point, max_delay_seconds=10)
 
                             game.commands_handled.append(command)
