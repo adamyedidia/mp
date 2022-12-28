@@ -138,8 +138,7 @@ class GameState:
                         players_in_game.append(['', 10000 + i])
 
                     print(players_in_game)
-                    print(f'game name: {game_name}')
-                    start_new_thread(_create_game_state_snaps, (game_name,))                    
+                    print(f'game name: {game_name}')     
                     client_ids_in_game = [player_info[1] for player_info in players_in_game]
                     random.shuffle(client_ids_in_game)
                     client_id_to_team: dict[int, Team] = {}
@@ -155,12 +154,6 @@ class GameState:
                         rset(f'player_number:{client_id}', player_number, client_id=None, game_name=game_name)
                         rset(f'client_id:{player_number}', client_id, client_id=None, game_name=game_name)
 
-                        sleep(0.1)
-                        store_command(Command(1, CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
-                                    data={'x': random.randint(1, GAME_WIDTH), 
-                                            'y': random.randint(1, GAME_HEIGHT),
-                                            'team': client_id_to_team[client_id].value}), for_client=client_id, client_id=None, game_name=game_name)
-
                     sleep(0.1)
                     rset('client_id_to_team', json.dumps({k: v.value for k, v in client_id_to_team.items()}), client_id=None, game_name=game_name)
                     sleep(0.1)
@@ -169,6 +162,14 @@ class GameState:
                     rset('game_started', '1', client_id=None, game_name=game_name)
                     sleep(0.1)
                     rset('game_names', json.dumps(all_game_names), client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME)
+
+                    for i, client_id in enumerate(client_ids_in_game):
+                        store_command(Command(1, CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
+                                    data={'x': random.randint(1, GAME_WIDTH), 
+                                            'y': random.randint(1, GAME_HEIGHT),
+                                            'team': client_id_to_team[client_id].value}), for_client=client_id, client_id=None, game_name=game_name)
+                        sleep(0.1)                                            
+                    start_new_thread(_create_game_state_snaps, (game_name,))
 
         elif payload.startswith('command') and game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME:
             all_game_names = _get_game_names()
