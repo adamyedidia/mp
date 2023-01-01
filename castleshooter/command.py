@@ -108,5 +108,5 @@ def server_store_player_commands(command_strs: list[str], for_client_id: int, ga
         existing_cids = [c['id'] for c in commands_for_player]
         command_strs_for_player.extend([c for c in command_strs if json.loads(c)['id'] not in existing_cids])
         commands_by_player[for_client_id] = command_strs_for_player
-        rset('commands_by_player', commands_by_player, client_id=None, game_name=game_name)
+        rset('commands_by_player', json.dumps(commands_by_player), client_id=None, game_name=game_name)
     
