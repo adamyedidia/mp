@@ -87,7 +87,7 @@ def store_command(command: Command, *, for_client: int,
             return
         commands = get_commands_by_projectile(client_id=None, game_name=game_name) if is_projectile_command else get_commands_by_player(client_id=None, game_name=game_name)
         command_id = command.data['projectile_id'] if is_projectile_command else command.client_id  # type: ignore
-        with redis_lock(f'add_command_for_player_redis_key_{client_id}', client_id=None, game_name=game_name):
+        with redis_lock(f'add_command_for_player_redis_key_{command_id}', client_id=None, game_name=game_name):
             assert command_id is not None
             if command_id in commands:
                 l = commands[command_id]
@@ -96,3 +96,16 @@ def store_command(command: Command, *, for_client: int,
             else:
                 commands[command_id] = [command_str]
             rset('commands_by_projectile' if is_projectile_command else 'commands_by_player', json.dumps(commands), client_id=None, game_name=game_name)
+
+
+def server_store_player_commands(command_strs: list[str], for_client_id: int, game_name: str) -> None:
+    commands_by_player = get_commands_by_player(client_id=None, game_name=game_name)
+    command_strs_for_player = commands_by_player.get(for_client_id) or []
+    with redis_lock(f'add_command_for_player_redis_key_{for_client_id}', client_id=None, game_name=game_name):
+        commands_for_player = [json.loads(c) for c in command_strs_for_player]
+        command_strs_for_player = [cs for cs, c in zip(command_strs_for_player, commands_for_player) if datetime.fromtimestamp(c['time']) > datetime.now() - timedelta(seconds=30)]
+        existing_cids = [c['id'] for c in commands_for_player]
+        command_strs_for_player.extend([c for c in command_strs if json.loads(c)['id'] not in existing_cids])
+        commands_by_player[for_client_id] = command_strs_for_player
+        rset('commands_by_player', commands_by_player, client_id=None, game_name=game_name)
+    

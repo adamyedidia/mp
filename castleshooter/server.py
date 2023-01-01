@@ -3,7 +3,7 @@ import json
 import zlib
 from team import get_team_for_client_id
 from utils import SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF, SPECIAL_LOBBY_MANAGER_GAME_NAME, GAME_HEIGHT, GAME_WIDTH
-from command import Command, store_command, CommandType
+from command import Command, store_command, CommandType, server_store_player_commands
 from settings import PORT, SERVER
 import socket
 from typing import Any, Optional
@@ -183,6 +183,11 @@ class GameState:
                 print(f'Storing command {data} for game {game_name}')
                 store_command(Command.from_json(json.loads(data)), client_id=None, for_client=packet.client_id, game_name=game_name)
             return True
+
+        elif payload.startswith('all_commands_heartbeat') and game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME:
+            _, data = payload.split('|')
+            assert packet.client_id is not None
+            server_store_player_commands(json.loads(data), packet.client_id, game_name=game_name)
 
         return False
             
