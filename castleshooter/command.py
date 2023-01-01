@@ -60,6 +60,7 @@ def get_commands_by_player(*, client_id: Optional[int] = None, game_name: Option
     if client_id is not None:
         return commands_by_player
     else:
+        print(f"Commands by player: {rget('commands_by_player', client_id=None, game_name=game_name)}")
         return {int(key): val for key, val in json.loads(rget('commands_by_player', client_id=None, game_name=game_name) or '{}').items()}
 
 
