@@ -39,6 +39,7 @@ def start_up_game(socket: Any) -> None:
     global game
     game = Game(750, 750, client, socket)
     start_new_thread(run_spontaneous_game_processes, (game,))
+    start_new_thread(send_all_commands_heartbeats, (socket,))
     game.run()    
 
 
@@ -299,9 +300,10 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
 
 def send_all_commands_heartbeats(socket: Any) -> None:
     while True:
-        commands_for_player = get_commands_by_player(client_id=client.id)[client.id]
+        if client.game_started:
+            commands_for_player = get_commands_by_player(client_id=client.id)[client.id]
 
-        send_with_retry(socket, f'all_commands_heartbeat|{json.dumps(commands_for_player)}', client_id=client.id)
+            send_with_retry(socket, f'all_commands_heartbeat|{json.dumps(commands_for_player)}', client_id=client.id)
 
         sleep(0.25)
 
@@ -324,7 +326,6 @@ def client_main() -> None:
         print('Listening for server updates!')
         thread.join()
         start_new_thread(listen_for_server_updates, (s,))
-        start_new_thread(send_all_commands_heartbeats, (s,))
         start_up_game(s)
     finally:
         print('Closing the socket!!')

@@ -59,7 +59,7 @@ NUMBER_KEYS = {1: pygame.K_1,
 
 def run_spontaneous_game_processes(game: 'Game') -> None:
     while True:
-        if time.time() % 0.1 < 0.01 and time.time() % 0.01 >= 0.0:
+        if time.time() % 0.1 < 0.01 and time.time() % 0.01 >= 0.0 and client.game_started:
             if random.random() < ITEM_GENERATION_RATE * 0.1 and len(game.items) < 20:
                 generate_item(game)
         sleep(0.01)
