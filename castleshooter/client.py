@@ -9,7 +9,8 @@ from typing import Any, Optional
 from redis_utils import rset, rget, redis_lock    
 from _thread import start_new_thread
 from threading import Thread
-from client_utils import client, get_player_number_from_client_id
+from client_utils import get_player_number_from_client_id
+from client_utils import _client as client
 from packet import (
     Packet, send_ack, send_spawn_command, send_without_retry, packet_ack_redis_key, packet_handled_redis_key, send_with_retry
 )
@@ -61,9 +62,10 @@ def handle_announcements_for_commands(commands_for_player: list[Command]) -> Non
             if command_idempotency_key not in announcement_idempotency_keys:
                 if command.type == CommandType.DIE:
                     assert command.data
+                    assert command.client_id
                     verb = command.data['verb']
                     killer_id = int(command.data['killer_id'])
-                    victim_id = command.client_id
+                    victim_id = get_player_number_from_client_id(command.client_id, client_id=client.id)
                     if victim_id == client.id:
                         message = f'Player {killer_id} {verb} you!'
                     elif killer_id == client.id:
