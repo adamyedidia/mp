@@ -131,7 +131,7 @@ class Game:
         self.player_number = self.client.id if self.client.id is not None else -1
         self.players: dict[int, Player] = {}
         self.player: Optional[Player] = None
-        self.canvas = Canvas(self.width, self.height, "Testing...") if ai_client_id is not None else None
+        self.canvas = Canvas(self.width, self.height, "Testing...") if ai_client_id is None else None
         self.announcements: list[Announcement] = []
         self.commands_handled: list[Command] = []
         self.target: Optional[Player] = None
