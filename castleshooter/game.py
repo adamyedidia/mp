@@ -781,6 +781,8 @@ def infer_game_state(*, end_time: Optional[datetime] = None, client_id: Optional
     snap_to_run_forward_from = GameState.from_json(json.loads(raw_snap_to_run_forward_from))
     raw_commands_by_player = get_commands_by_player(client_id=client_id, game_name=game_name)
     raw_commands_by_projectile = get_commands_by_projectile(client_id=client_id, game_name=game_name)
+    # if client_id is not None and game_name is None:
+    #     print(raw_commands_by_player[client_id])
     player_ids_commands_have_been_run_for: set[int] = set()
     final_players: list[Player] = []
     player: Optional[Player] = None

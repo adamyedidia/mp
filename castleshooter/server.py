@@ -185,7 +185,8 @@ class GameState:
                     start_new_thread(_create_game_state_snaps, (game_name,))
 
                     for i, client_id in enumerate(client_ids_in_game):
-                        start_new_thread(start_up_game_for_ai, (client_id, client_id_to_team[client_id], game_name))
+                        if client_id > 10000:
+                            start_new_thread(start_up_game_for_ai, (client_id, client_id_to_team[client_id], game_name))
             return True
 
         elif payload.startswith('command') and game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME:
