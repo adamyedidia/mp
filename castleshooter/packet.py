@@ -136,7 +136,8 @@ def send_ack(conn: Any, packet_id: int) -> None:
     conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
 
-def send_command(conn: Any, command: Command, *, client_id: int) -> Command:
+# game_name only used by AI players
+def send_command(conn: Any, command: Command, *, client_id: int, game_name: Optional[str] = None) -> Command:
     if conn is not None:
         store_command(command, for_client=client_id, client_id=client_id)
         command_str = f'command|{json.dumps(command.to_json())}'
@@ -144,7 +145,7 @@ def send_command(conn: Any, command: Command, *, client_id: int) -> Command:
         start_new_thread(send_with_retry, (conn, f'command|{json.dumps(command.to_json())}', client_id))
     else:
         # AI players are run directly on the server and so have direct access to the server db
-        store_command(command=command, for_client=client_id, client_id=None)
+        store_command(command=command, for_client=client_id, client_id=None, game_name=game_name)
 
     return command
 
@@ -154,10 +155,12 @@ def _generate_next_command_id(client_id: Optional[int]) -> int:
     rset('next_command_id', next_command_id, client_id=client_id)
     return next_command_id
 
-def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int) -> Command:
+
+# game_name only used by AI players
+def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int, game_name: Optional[str] = None) -> Command:
     return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
                         type=CommandType.MOVE, time=datetime.now(), client_id=client_id, 
-                        data={'x': x_pos, 'y': y_pos}), client_id=client_id)
+                        data={'x': x_pos, 'y': y_pos}), client_id=client_id, game_name=game_name)
 
 
 def generate_spawn_command(x_pos: int, y_pos: int, team: Team, *, client_id: int) -> Command:
