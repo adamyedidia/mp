@@ -131,7 +131,7 @@ class Game:
         self.player_number = self.client.id if self.client.id is not None else -1
         self.players: dict[int, Player] = {}
         self.player: Optional[Player] = None
-        self.canvas = Canvas(self.width, self.height, "Testing...")
+        self.canvas = Canvas(self.width, self.height, "Testing...") if ai_client_id is not None else None
         self.announcements: list[Announcement] = []
         self.commands_handled: list[Command] = []
         self.target: Optional[Player] = None
@@ -177,8 +177,11 @@ class Game:
                 game_state = GameState([], [])
 
             client_player = self.player
-            self.canvas.draw_background()
-            canvas = self.canvas.get_canvas()
+            canvas = None
+            if not self.client.ai:
+                assert self.canvas
+                self.canvas.draw_background()
+                canvas = self.canvas.get_canvas()
             target = self.target
             game_items = self.items.copy()
             x_offset: Optional[int] = None
@@ -383,6 +386,7 @@ class Game:
 
             # Update Canvas
             if not self.client.ai:
+                assert canvas
                 if client_player is not None:
                     x_offset = int(client_player.x - self.width / 2)
                     y_offset = int(client_player.y - self.height / 2)
@@ -481,6 +485,7 @@ class Game:
                         draw_text_list(canvas, ['Players in game:', '', *[str(player[0]) for player in active_players]], 200, 300, 200, 50, 35)
                     game_names = json.loads(rget('game_names', client_id=self.client.id) or '{}')
 
+                assert self.canvas
                 self.canvas.update()
 
         pygame.quit()
