@@ -210,7 +210,7 @@ class Game:
                                     self.ai_last_changed_target_at = datetime.now()
 
                         if self.ai_last_gave_command_at < datetime.now() - timedelta(milliseconds=250) and self.target is not None:
-                            send_move_command(None, self.target.x, self.target.y, client_id=self.client.id)
+                            send_move_command(None, self.target.x, self.target.y, client_id=self.client.id, game_name=self.client.game_name)
                                 
                     else:
                         x_offset = int(client_player.x - self.width / 2)
