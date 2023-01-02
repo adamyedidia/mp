@@ -166,7 +166,7 @@ class Game:
             # print(f'game started: {client.game_started}')
 
             if self.client.game_name is not None and self.client.game_started:
-                game_state = infer_game_state(client_id=self.client.id if not self.client.ai else None)
+                game_state = infer_game_state(client_id=self.client.id if not self.client.ai else None, game_name=self.client.game_name if self.client.ai else None)
                 for player in game_state.players:
                     if player.client_id == self.client.id:
                         if self.player is not None:
