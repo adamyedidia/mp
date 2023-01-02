@@ -300,6 +300,9 @@ def _handle_outgoing_active_players_connection(connection: Connection, game_name
             return True
         return False
 
+    if game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME:
+        start_new_thread(_broadcast_commands, (connection, game_name))
+
     subscription_keys = _SUBSCRIPTION_KEYS if game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME else _LOBBY_MANAGER_SUBSCRIPTION_KEYS
     rlisten(subscription_keys, _handle_change, game_name=game_name, break_when=_break_when if game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME else None)
 
@@ -312,6 +315,15 @@ def _create_game_state_snaps(game_name: str) -> None:
 
         sleep(SNAPSHOTS_CREATED_EVERY)
 
+
+def _broadcast_commands(connection: Connection, game_name: str) -> None:
+    while True:
+        send_without_retry(connection.conn, f'commands_by_player|{rget("commands_by_player", client_id=None, game_name=game_name)}',
+                           client_id=None)
+        sleep(0.05)
+        send_without_retry(connection.conn, f'commands_by_projectile|{rget("commands_by_projectile", client_id=None, game_name=game_name)}',
+                           client_id=None)
+        sleep(0.05)
 
     # while True:
     #     active_players = game_state.get_active_players()
