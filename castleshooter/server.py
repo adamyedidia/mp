@@ -318,10 +318,10 @@ def _create_game_state_snaps(game_name: str) -> None:
 
 def _broadcast_commands(connection: Connection, game_name: str) -> None:
     while True:
-        send_without_retry(connection.conn, f'commands_by_player|{rget("commands_by_player", client_id=None, game_name=game_name)}',
+        send_without_retry(connection.conn, f'commands_by_player|{rget("commands_by_player", client_id=None, game_name=game_name) or "{}"}',
                            client_id=None)
         sleep(0.25)
-        send_without_retry(connection.conn, f'commands_by_projectile|{rget("commands_by_projectile", client_id=None, game_name=game_name)}',
+        send_without_retry(connection.conn, f'commands_by_projectile|{rget("commands_by_projectile", client_id=None, game_name=game_name) or "{}"}',
                            client_id=None)
         sleep(0.25)
 
