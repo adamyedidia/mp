@@ -11,6 +11,7 @@ class Client:
         self.player_number: Optional[int] = None
         self.game_started: bool = False
         self.game_name: Optional[str] = None
+        self.ai: bool = False
 
     def set_id(self, id: int) -> None:
         self.id = id
@@ -41,6 +42,7 @@ def get_client(ai_client_id: Optional[int] = None, ai_team: Optional[Team] = Non
     client.team = ai_team
     client.game_name = game_name
     client.game_started = True
+    client.ai = True
     return client
 
 

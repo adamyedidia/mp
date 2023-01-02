@@ -137,10 +137,14 @@ def send_ack(conn: Any, packet_id: int) -> None:
 
 
 def send_command(conn: Any, command: Command, *, client_id: int) -> Command:
-    store_command(command, for_client=client_id, client_id=client_id)
-    command_str = f'command|{json.dumps(command.to_json())}'
-    print(f'Sending command: {command_str}\n')
-    start_new_thread(send_with_retry, (conn, f'command|{json.dumps(command.to_json())}', client_id))
+    if conn is not None:
+        store_command(command, for_client=client_id, client_id=client_id)
+        command_str = f'command|{json.dumps(command.to_json())}'
+        print(f'Sending command: {command_str}\n')
+        start_new_thread(send_with_retry, (conn, f'command|{json.dumps(command.to_json())}', client_id))
+    else:
+        # AI players are run directly on the server and so have direct access to the server db
+        store_command(command=command, for_client=client_id, client_id=None)
 
     return command
 
