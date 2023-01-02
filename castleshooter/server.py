@@ -19,6 +19,9 @@ import game
 import random
 from team import Team
 import traceback
+from client_utils import get_client
+from game import Game
+from ai_personality import AiPersonality
 
 
 _SUBSCRIPTION_KEYS = ['active_players', 
@@ -60,6 +63,13 @@ def _clear_stored_data(stored_data: list[str]) -> None:
 # Returns a dict from game name to whether or not that game has started
 def _get_game_names() -> dict[str, bool]:
     return json.loads(rget('game_names', client_id=None, game_name=SPECIAL_LOBBY_MANAGER_GAME_NAME) or '{}')
+
+
+def start_up_game_for_ai(ai_client_id: int, ai_team: Team, game_name: str) -> None:
+    client = get_client(ai_client_id=ai_client_id, ai_team=ai_team, game_name=game_name)
+    ai_personality = AiPersonality()
+    game = Game(750, 750, client, None, ai_client_id=ai_client_id, ai_team=ai_team, ai_game_name=game_name, ai_personality=ai_personality)
+    game.run()
 
 
 class GameState:
@@ -173,6 +183,9 @@ class GameState:
                                             'team': client_id_to_team[client_id].value}), for_client=client_id, client_id=None, game_name=game_name)
                         sleep(0.1)                                            
                     start_new_thread(_create_game_state_snaps, (game_name,))
+
+                    for i, client_id in enumerate(client_ids_in_game):
+                        start_new_thread(start_up_game_for_ai, (client_id, client_id_to_team[client_id], game_name))
             return True
 
         elif payload.startswith('command') and game_name != SPECIAL_LOBBY_MANAGER_GAME_NAME:
