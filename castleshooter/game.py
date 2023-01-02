@@ -157,6 +157,8 @@ class Game:
             print(f'Uh oh, my player number is {self.player_number}, which is messed up')
         
         while run:
+            if self.client.ai:
+                sleep(0.1)
             clock.tick(60)
 
             if self.player_number < 0:
@@ -187,8 +189,6 @@ class Game:
             x_offset: Optional[int] = None
             y_offset: Optional[int] = None
 
-            print(self.ai_last_gave_command_at)
-
             if self.client.game_name is not None and self.client.game_started:
                 if client_player is not None:
                     if self.client.ai:
@@ -212,7 +212,7 @@ class Game:
                                     self.ai_last_changed_target_at = datetime.now()
 
                         if self.ai_last_gave_command_at < datetime.now() - timedelta(milliseconds=250) and self.target is not None:
-                            # send_move_command(None, self.target.x, self.target.y, client_id=self.client.id, game_name=self.client.game_name)
+                            send_move_command(None, self.target.x, self.target.y, client_id=self.client.id, game_name=self.client.game_name)
                             self.ai_last_gave_command_at = datetime.now()
                                 
                     else:
