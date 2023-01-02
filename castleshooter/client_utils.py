@@ -28,7 +28,20 @@ class Client:
         self.game_name = game_name
 
 
-client = Client()
+_client = Client()
+
+
+def get_client(ai_client_id: Optional[int] = None, ai_team: Optional[Team] = None, game_name: Optional[str] = None) -> Client:
+    if ai_client_id is None:
+        return _client
+    assert ai_team
+    assert game_name
+    client = Client()
+    client.id = ai_client_id
+    client.team = ai_team
+    client.game_name = game_name
+    client.game_started = True
+    return client
 
 
 def get_player_number_from_client_id(from_client_id: int, *, client_id: Optional[int], game_name: Optional[str] = None) -> int:
