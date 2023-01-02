@@ -320,10 +320,10 @@ def _broadcast_commands(connection: Connection, game_name: str) -> None:
     while True:
         send_without_retry(connection.conn, f'commands_by_player|{rget("commands_by_player", client_id=None, game_name=game_name)}',
                            client_id=None)
-        sleep(0.05)
+        sleep(0.1)
         send_without_retry(connection.conn, f'commands_by_projectile|{rget("commands_by_projectile", client_id=None, game_name=game_name)}',
                            client_id=None)
-        sleep(0.05)
+        sleep(0.1)
 
     # while True:
     #     active_players = game_state.get_active_players()
