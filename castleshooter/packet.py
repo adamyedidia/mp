@@ -184,76 +184,76 @@ def send_command(conn: Any, command: Command, *, client_id: int, game_name: Opti
     return command
 
 
-def _generate_next_command_id(client_id: Optional[int]) -> int:
-    next_command_id = int(rget('next_command_id', client_id=client_id) or '0') + 2
+def _generate_next_command_id(client_id: Optional[int], game_name: Optional[str] = None) -> int:
+    next_command_id = int(rget('next_command_id', client_id=client_id, game_name=game_name) or '0') + 2
     rset('next_command_id', next_command_id, client_id=client_id)
     return next_command_id
 
 
 # game_name only used by AI players
 def send_move_command(conn: Any, x_pos: int, y_pos: int, *, client_id: int, game_name: Optional[str] = None) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id), 
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name), 
                         type=CommandType.MOVE, time=datetime.now(), client_id=client_id, 
                         data={'x': x_pos, 'y': y_pos}), client_id=client_id, game_name=game_name)
 
 
-def generate_spawn_command(x_pos: int, y_pos: int, team: Team, *, client_id: int) -> Command:
-    return Command(id=_generate_next_command_id(client_id=client_id), 
+def generate_spawn_command(x_pos: int, y_pos: int, team: Team, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name), 
                    type=CommandType.SPAWN, time=datetime.now(), client_id=client_id, 
                    data={'x': x_pos, 'y': y_pos, 'team': team.value})
 
 
-def send_spawn_command(conn: Any, x_pos: int, y_pos: int, team: Team, *, client_id: int) -> Command:
-    return send_command(conn, generate_spawn_command(x_pos, y_pos, team, client_id=client_id), client_id=client_id)
+def send_spawn_command(conn: Any, x_pos: int, y_pos: int, team: Team, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, generate_spawn_command(x_pos, y_pos, team, client_id=client_id, game_name=game_name), client_id=client_id, game_name=game_name)
 
 
-def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_turn_command(conn: Any, direction: Optional[Direction], *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name),
                  type=CommandType.TURN, time=datetime.now(), client_id=client_id, 
                  data={'dir': direction.value if direction else None}),
-                 client_id=client_id)
+                 client_id=client_id, game_name=game_name)
 
 
 def send_spawn_projectile_command(conn: Any, projectile_id: int, source_x: int, source_y: int, dest_x: int, dest_y: int, 
-                                  friends: list[int], type: ProjectileType, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+                                  friends: list[int], type: ProjectileType, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name),
                  type=CommandType.SPAWN_PROJECTILE, time=datetime.now(), client_id=client_id,
                  data={'id': projectile_id, 'source_x': source_x, 'source_y': source_y, 'dest_x': dest_x, 'dest_y': dest_y, 
-                 'type': type.value, 'player_id': client_id, 'friends': friends}), client_id=client_id)
+                 'type': type.value, 'player_id': client_id, 'friends': friends}), client_id=client_id, game_name=game_name)
 
 
-def send_eat_arrow_command(conn: Any, arrow_start_x: int, arrow_start_y: int, arrow_end_x: int, arrow_end_y: int, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_eat_arrow_command(conn: Any, arrow_start_x: int, arrow_start_y: int, arrow_end_x: int, arrow_end_y: int, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name),
                  type=CommandType.EAT_ARROW, time=datetime.now(), client_id=client_id,
                  data={'arrow_start_x': arrow_start_x, 'arrow_start_y': arrow_start_y, 'arrow_end_x': arrow_end_x, 
-                 'arrow_end_y': arrow_end_y, 'player_id': client_id}), client_id=client_id)
+                 'arrow_end_y': arrow_end_y, 'player_id': client_id}), client_id=client_id, game_name=game_name)
 
 
-def send_remove_projectile_command(conn: Any, projectile_id: int, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_remove_projectile_command(conn: Any, projectile_id: int, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name),
                  type=CommandType.REMOVE_PROJECTILE, time=datetime.now(), client_id=client_id,
-                 data={'projectile_id': projectile_id}), client_id=client_id)
+                 data={'projectile_id': projectile_id}), client_id=client_id, game_name=game_name)
 
 
-def send_die_command(conn: Any, killer_id: int, verb: str, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_die_command(conn: Any, killer_id: int, verb: str, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name),
                  type=CommandType.DIE, time=datetime.now(), data={'killer_id': killer_id, 'verb': verb}, 
-                 client_id=client_id), client_id=client_id)
+                 client_id=client_id), client_id=client_id, game_name=game_name)
 
 
-def send_lose_hp_command(conn: Any, killer_id: int, victim_id: int, verb: str, hp: int, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_lose_hp_command(conn: Any, killer_id: int, victim_id: int, verb: str, hp: int, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name),
                         type=CommandType.LOSE_HP, time=datetime.now(), 
-                        data={'killer_id': killer_id, 'verb': verb, 'hp': hp}, client_id=victim_id), client_id=client_id)
+                        data={'killer_id': killer_id, 'verb': verb, 'hp': hp}, client_id=victim_id), client_id=client_id, game_name=game_name)
 
 
-def send_teleport_command(conn: Any, x: int, y: int, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_teleport_command(conn: Any, x: int, y: int, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name),
                         type=CommandType.TELEPORT, time=datetime.now(), data={'x': x, 'y': y}, 
-                        client_id=client_id), client_id=client_id)
+                        client_id=client_id), client_id=client_id, game_name=game_name)
 
 
-def send_set_speed_command(conn: Any, speed: int, *, client_id: int) -> Command:
-    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id),
+def send_set_speed_command(conn: Any, speed: int, *, client_id: int, game_name: Optional[str] = None) -> Command:
+    return send_command(conn, Command(id=_generate_next_command_id(client_id=client_id, game_name=game_name),
                         type=CommandType.SET_SPEED, time=datetime.now(), data={'speed': speed},
-                        client_id=client_id), client_id=client_id)
+                        client_id=client_id), client_id=client_id, game_name=game_name)
