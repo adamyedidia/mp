@@ -22,7 +22,7 @@ import traceback
 from client_utils import get_client
 from game import Game
 from ai_personality import AiPersonality
-
+from utils import logs
 
 _SUBSCRIPTION_KEYS = ['active_players']
 
@@ -326,6 +326,7 @@ def _broadcast_digest(connection: Connection, game_name: str) -> None:
         }
 
         send_without_retry(connection.conn, f'all_info_digest|{json.dumps(all_info_digest)}', client_id=None)
+        print(logs)
         sleep(0.25)
 
     # while True:

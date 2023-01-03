@@ -71,3 +71,6 @@ def clamp_to_game_x(x: int) -> int:
     return clamp(0, x, GAME_WIDTH)
 def clamp_to_game_y(y: int) -> int:
     return clamp(0, y, GAME_HEIGHT)
+
+
+logs = []
