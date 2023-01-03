@@ -152,11 +152,13 @@ class GameState:
                     red_team = random.sample(client_ids_in_game, 4)
                     for i, client_id in enumerate(client_ids_in_game):
                         if client_id in red_team:
-                            client_id_to_team[client_id] = Team.RED
+                            team = Team.RED
                         else:
-                            client_id_to_team[client_id] = Team.BLUE
+                            team = Team.BLUE
+                        client_id_to_team[client_id] = team
                         player_number = i + 1
                         client_id_to_player_number[client_id] = player_number
+                        rset(f'team:{client_id}', team.value, client_id=None, game_name=game_name)
                         rset(f'player_number:{client_id}', player_number, client_id=None, game_name=game_name)
                         rset(f'client_id:{player_number}', client_id, client_id=None, game_name=game_name)
 
