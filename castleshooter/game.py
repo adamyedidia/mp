@@ -291,19 +291,7 @@ class Game:
                                     if pressed[pygame.K_SPACE]:
                                         if client_player.weapon == Weapon.BOW and client_player.ammo > 0:
                                             mouse_x, mouse_y = pygame.mouse.get_pos()
-                                            unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
-                                            arrow_distance = 400
-                                            arrow_dest_x = client_player.x + int(unit_vector_from_player_to_mouse[0] * arrow_distance)
-                                            arrow_dest_y = client_player.y + int(unit_vector_from_player_to_mouse[1] * arrow_distance)
-                                            send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, 
-                                                                        [self.client.id, *[get_client_id_from_player_number(player_number, client_id=self.client.id) 
-                                                                        for player_number in self.player_numbers_to_putative_teams.keys() 
-                                                                        if self.player_numbers_to_putative_teams.get(player_number) == self.client.team]], 
-                                                                        type=ProjectileType.ARROW, client_id=self.client.id)
-                                            # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
-                                            client_player.ammo -= 1
-                                            if client_player.ammo <= 0:
-                                                client_player.weapon = None
+                                            self.shoot_bow(client_player, mouse_x + x_offset, mouse_y + y_offset)
                                         elif client_player.weapon == Weapon.DAGGER and target is not None:
                                             send_lose_hp_command(self.s, client_player.client_id, target.client_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=self.client.id)
                                             send_teleport_command(self.s, target.x, target.y, client_id=self.client.id)
@@ -572,6 +560,21 @@ class Game:
             self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
                                                 datetime.now(), message))
             self.player = None        
+
+    def shoot_bow(self, client_player: Player, dest_x: int, dest_y: int) -> None:
+        unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x, client_player.y, dest_x, dest_y)
+        arrow_distance = 400
+        arrow_dest_x = client_player.x + int(unit_vector_from_player_to_mouse[0] * arrow_distance)
+        arrow_dest_y = client_player.y + int(unit_vector_from_player_to_mouse[1] * arrow_distance)
+        send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, 
+                                    [self.client.id, *[get_client_id_from_player_number(player_number, client_id=self.client.id) 
+                                    for player_number in self.player_numbers_to_putative_teams.keys() 
+                                    if self.player_numbers_to_putative_teams.get(player_number) == self.client.team]], 
+                                    type=ProjectileType.ARROW, client_id=self.client.id, game_name=self.client.game_name)
+        # send_shoot_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, type=ProjectileType.ARROW)
+        client_player.ammo -= 1
+        if client_player.ammo <= 0:
+            client_player.weapon = None
 
     def add_announcement(self, annoucement: Announcement) -> None:
         self.announcements = [a for a in self.announcements if a.time > datetime.now() - timedelta(seconds=15)]
