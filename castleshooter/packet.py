@@ -72,6 +72,31 @@ def packet_handled_redis_key(packet_id: int, *, for_client: Optional[int]) -> st
     return f'packet_handled|{packet_id}{for_client_suffix}'
 
 
+def receive_compressed_message(socket: Any) -> str:
+    preamble = socket.recv(12).decode()
+    if preamble[:4] != '[[[[':
+        return ''
+    
+    total_length_of_message = int(preamble[4:])
+    length_read_so_far = 0
+    chunk_size = 256
+    messages: list[bytes] = []
+    while length_read_so_far < total_length_of_message:
+        next_chunk_length = max(min(chunk_size, total_length_of_message - length_read_so_far), 0)
+        messages.append(socket.recv(next_chunk_length))
+        length_read_so_far += next_chunk_length
+        
+    end = socket.recv(4).decode()
+    if end != ']]]]':
+        return ''
+    
+    return zlib.decompress(b''.join(messages)).decode()
+
+
+def _send_compressed_message(conn: Any, compressed_message: bytes) -> None:
+    conn.sendall(b'[[[[' + bytes(f"{len(compressed_message):08}", 'utf-8') + compressed_message + b']]]]')
+
+
 # Returns the boolean of whether or not the message was successfully sent (i.e. an ack was received)
 def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *, 
                            client_id: Optional[int], game_name: Optional[str] = None) -> bool:
@@ -80,7 +105,7 @@ def _send_with_retry_inner(conn: Any, packet: Packet, wait_time: float, *,
     # print(f'Sending {packet}')
     if DROP_CHANCE and random.random() < DROP_CHANCE:
         return False    
-    conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
+    _send_compressed_message(conn, zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
     sleep(wait_time)
 
@@ -127,14 +152,13 @@ def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> 
     else:
         packet = Packet(client_id=client_id, payload=message)
         # print(f'Sending without retry {packet}')    
-        print(len(zlib.compress(bytes(packet.to_str(), 'utf-8'))))
-        conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
+        _send_compressed_message(conn, zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
 
 def send_ack(conn: Any, packet_id: int) -> None:
     packet = Packet(id=packet_id, is_ack=True)
-    # print(f'Acking {packet}')        
-    conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
+    # print(f'Acking {packet}')
+    _send_compressed_message(conn, zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
 
 # game_name only used by AI players
