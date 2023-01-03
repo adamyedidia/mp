@@ -324,6 +324,7 @@ def _broadcast_digest(connection: Connection, game_name: str) -> None:
         }
 
         print(len(f'all_info_digest|{json.dumps(all_info_digest)}'))
+        print(f'all_info_digest|{json.dumps(all_info_digest)}')
 
         send_without_retry(connection.conn, f'all_info_digest|{json.dumps(all_info_digest)}', client_id=None)
         sleep(0.25)
