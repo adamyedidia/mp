@@ -73,10 +73,16 @@ def packet_handled_redis_key(packet_id: int, *, for_client: Optional[int]) -> st
 
 
 def receive_compressed_message(socket: Any) -> str:
-    prepreamble = socket.recv(1).decode()
+    try:
+        prepreamble = socket.recv(1).decode()
+    except UnicodeDecodeError:
+        return ''
     if prepreamble != '[':
         return ''
-    preamble = socket.recv(11).decode()
+    try:
+        preamble = socket.recv(11).decode()
+    except UnicodeDecodeError:
+        return ''
     if preamble[:3] != '[[[':
         return ''
     
@@ -84,19 +90,19 @@ def receive_compressed_message(socket: Any) -> str:
     length_read_so_far = 0
     chunk_size = 256
     messages: list[bytes] = []
+    print(total_length_of_message)
     while length_read_so_far < total_length_of_message:
         next_chunk_length = max(min(chunk_size, total_length_of_message - length_read_so_far), 0)
         messages.append(socket.recv(next_chunk_length))
         length_read_so_far += next_chunk_length
-        
-    end = socket.recv(4).decode()
-    if end != ']]]]':
-        return ''
+    
+    socket.recv(4)
     
     return zlib.decompress(b''.join(messages)).decode()
 
 
 def _send_compressed_message(conn: Any, compressed_message: bytes) -> None:
+    print(len(compressed_message))
     conn.sendall(b'[[[[' + bytes(f"{len(compressed_message):08}", 'utf-8') + compressed_message + b']]]]')
 
 
