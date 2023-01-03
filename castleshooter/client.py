@@ -22,6 +22,7 @@ from time import sleep
 import pygame
 from team import Team, flip_team
 from score import score
+import traceback
 
 
 game: Optional[Game] = None
@@ -246,7 +247,9 @@ def _handle_payload_from_server(payload: str) -> None:
                 if (client_id_to_team_data := all_info_digest.get('client_id_to_team')):
                     _handle_client_id_to_team(client_id_to_team_data)
             else:
-                _handle_most_recent_game_snapshot(all_info_digest.get('most_recent_game_snapshot') or '')
+                print('Handling digest!')
+                # print(f'Most recent game snapshot: {all_info_digest.get("most_recent_game_state_snapshot")}')
+                _handle_most_recent_game_snapshot(all_info_digest.get('most_recent_game_state_snapshot') or '')
                 _handle_commands_by_player(all_info_digest.get('commands_by_player') or '{}')
                 _handle_commands_by_projectile(all_info_digest.get('commands_by_projectile') or '{}')
 
@@ -304,9 +307,12 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
     while True:
         global stored_data
         try:
-            raw_data = zlib.decompress(socket.recv(1048576)).decode()
+            # 1048576
+            print(len(socket.recv(65536)))
+            raw_data = zlib.decompress(socket.recv(65536)).decode()
         except Exception as e:
             print(f'Error decompressing data: {e}')
+            traceback.print_exc()
             raw_data = ''
             sleep(0.02)
         for datum in raw_data.split(';'):
