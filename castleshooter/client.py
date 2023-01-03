@@ -112,6 +112,91 @@ def handle_client_changes_for_all_commands(commands_by_player: dict[int, list[st
                             game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
 
 
+def _handle_commands_by_player(data: str):
+    raw_commands_by_player = get_commands_by_player(client_id=client.id)
+    raw_commands_by_player_from_server = {int(key): val for key, val in json.loads(data).items()}
+    player_ids_handled: set[int] = set()
+    global commands_by_player
+    for player_id, raw_commands in raw_commands_by_player.items():
+        player_ids_handled.add(player_id)
+        commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands], 
+                                        key=lambda c: c.time)
+        commands_for_player = [c for c in commands_for_player 
+                                if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
+        raw_commands_from_server = raw_commands_by_player_from_server.get(player_id) or []
+        commands_for_player_from_server = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], key=lambda c: c.time)
+        commands_for_player_from_server = [c for c in commands_for_player_from_server 
+                                            if (c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)
+                                                and c.id not in [ci.id for ci in commands_for_player])]
+        commands_for_player.extend(commands_for_player_from_server)
+        commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]
+        handle_announcements_for_commands(commands_for_player)
+        handle_hp_loss_for_commands(commands_for_player)
+        handle_client_changes_for_all_commands(commands_by_player)    
+
+    for player_id, raw_commands_from_server in raw_commands_by_player_from_server.items():
+        if player_id in player_ids_handled:
+            continue
+        player_ids_handled.add(player_id)
+        commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], 
+                                        key=lambda c: c.time)                
+        commands_for_player = [c for c in commands_for_player 
+                                if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
+        commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]     
+        handle_announcements_for_commands(commands_for_player)   
+        handle_hp_loss_for_commands(commands_for_player)
+        handle_client_changes_for_all_commands(commands_by_player)    
+
+
+def _handle_commands_by_projectile(data: str) -> None:
+    raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id)
+    raw_commands_by_projectile_from_server = {int(key): val for key, val in json.loads(data).items()}
+    projectile_ids_handled: set[int] = set()
+    global commands_by_projectile
+    for projectile_id, raw_commands in raw_commands_by_projectile.items():
+        projectile_ids_handled.add(projectile_id)
+        commands_for_projectile = sorted([Command.from_json(json.loads(c)) for c in raw_commands], 
+                                        key=lambda c: c.time)
+        commands_for_projectile = [c for c in commands_for_projectile 
+                                if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
+        raw_commands_from_server = raw_commands_by_projectile_from_server.get(projectile_id) or []
+        commands_for_projectile_from_server = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], key=lambda c: c.time)
+        commands_for_projectile_from_server = [c for c in commands_for_projectile_from_server 
+                                            if (c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)
+                                                and c.id not in [ci.id for ci in commands_for_projectile])]
+        commands_for_projectile.extend(commands_for_projectile_from_server)
+        commands_by_projectile[projectile_id] = [json.dumps(c.to_json()) for c in commands_for_projectile]
+
+    for projectile_id, raw_commands_from_server in raw_commands_by_projectile_from_server.items():
+        if projectile_id in projectile_ids_handled:
+            continue
+        projectile_ids_handled.add(projectile_id)
+        commands_for_projectile = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], 
+                                        key=lambda c: c.time)                
+        commands_for_projectile = [c for c in commands_for_projectile 
+                                if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
+        commands_by_projectile[projectile_id] = [json.dumps(c.to_json()) for c in commands_for_projectile]       
+
+
+def _handle_client_id_to_player_number(data: str) -> None:
+    client_id_to_player_number = json.loads(data)
+
+    for client_id, player_number in client_id_to_player_number.items():
+        rset(f'player_number:{client_id}', player_number, client_id=client.id)
+        rset(f'client_id:{player_number}', client_id, client_id=client.id)
+
+    start_new_thread(_start_game_on_delay, tuple([]))    
+
+
+def _handle_client_id_to_team(data: str) -> None:
+    client_id_to_team = json.loads(data)
+    for client_id, team in client_id_to_team.items():
+        rset(f'team:{client_id}', team, client_id=client.id)
+        if int(client_id) == int(client.id):
+            print(f'Setting team to {team}')
+            client.set_team(Team(team))
+
+
 def _handle_payload_from_server(payload: str) -> None:
     if payload.startswith('client_id|') and client.id is None:
         pass
@@ -129,85 +214,16 @@ def _handle_payload_from_server(payload: str) -> None:
                 del game_state_snapshots[0]
 
         if 'commands_by_player' in key:
-            raw_commands_by_player = get_commands_by_player(client_id=client.id)
-            raw_commands_by_player_from_server = {int(key): val for key, val in json.loads(data).items()}
-            player_ids_handled: set[int] = set()
-            global commands_by_player
-            for player_id, raw_commands in raw_commands_by_player.items():
-                player_ids_handled.add(player_id)
-                commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands], 
-                                             key=lambda c: c.time)
-                commands_for_player = [c for c in commands_for_player 
-                                       if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
-                raw_commands_from_server = raw_commands_by_player_from_server.get(player_id) or []
-                commands_for_player_from_server = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], key=lambda c: c.time)
-                commands_for_player_from_server = [c for c in commands_for_player_from_server 
-                                                  if (c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)
-                                                      and c.id not in [ci.id for ci in commands_for_player])]
-                commands_for_player.extend(commands_for_player_from_server)
-                commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]
-                handle_announcements_for_commands(commands_for_player)
-                handle_hp_loss_for_commands(commands_for_player)
-                handle_client_changes_for_all_commands(commands_by_player)
-
-            for player_id, raw_commands_from_server in raw_commands_by_player_from_server.items():
-                if player_id in player_ids_handled:
-                    continue
-                player_ids_handled.add(player_id)
-                commands_for_player = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], 
-                                             key=lambda c: c.time)                
-                commands_for_player = [c for c in commands_for_player 
-                                       if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
-                commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]     
-                handle_announcements_for_commands(commands_for_player)   
-                handle_hp_loss_for_commands(commands_for_player)
-                handle_client_changes_for_all_commands(commands_by_player)                                     
+            _handle_commands_by_player(data)
 
         if 'commands_by_projectile' in key:
-            raw_commands_by_projectile = get_commands_by_projectile(client_id=client.id)
-            raw_commands_by_projectile_from_server = {int(key): val for key, val in json.loads(data).items()}
-            projectile_ids_handled: set[int] = set()
-            global commands_by_projectile
-            for projectile_id, raw_commands in raw_commands_by_projectile.items():
-                projectile_ids_handled.add(projectile_id)
-                commands_for_projectile = sorted([Command.from_json(json.loads(c)) for c in raw_commands], 
-                                             key=lambda c: c.time)
-                commands_for_projectile = [c for c in commands_for_projectile 
-                                       if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
-                raw_commands_from_server = raw_commands_by_projectile_from_server.get(projectile_id) or []
-                commands_for_projectile_from_server = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], key=lambda c: c.time)
-                commands_for_projectile_from_server = [c for c in commands_for_projectile_from_server 
-                                                  if (c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)
-                                                      and c.id not in [ci.id for ci in commands_for_projectile])]
-                commands_for_projectile.extend(commands_for_projectile_from_server)
-                commands_by_projectile[projectile_id] = [json.dumps(c.to_json()) for c in commands_for_projectile]
-
-            for projectile_id, raw_commands_from_server in raw_commands_by_projectile_from_server.items():
-                if projectile_id in projectile_ids_handled:
-                    continue
-                projectile_ids_handled.add(projectile_id)
-                commands_for_projectile = sorted([Command.from_json(json.loads(c)) for c in raw_commands_from_server], 
-                                             key=lambda c: c.time)                
-                commands_for_projectile = [c for c in commands_for_projectile 
-                                       if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
-                commands_by_projectile[projectile_id] = [json.dumps(c.to_json()) for c in commands_for_projectile]    
+            _handle_commands_by_projectile(data)
 
         if 'client_id_to_player_number' in key:
-            client_id_to_player_number = json.loads(data)
-
-            for client_id, player_number in client_id_to_player_number.items():
-                rset(f'player_number:{client_id}', player_number, client_id=client.id)
-                rset(f'client_id:{player_number}', client_id, client_id=client.id)
-
-            start_new_thread(_start_game_on_delay, tuple([]))
+            _handle_client_id_to_player_number(data)
 
         if 'client_id_to_team' in key:
-            client_id_to_team = json.loads(data)
-            for client_id, team in client_id_to_team.items():
-                rset(f'team:{client_id}', team, client_id=client.id)
-                if int(client_id) == int(client.id):
-                    print(f'Setting team to {team}')
-                    client.set_team(Team(team))
+            _handle_client_id_to_team(data)
 
         if 'active_players' in key:
             rset('active_players', data, client_id=client.id)
@@ -215,6 +231,16 @@ def _handle_payload_from_server(payload: str) -> None:
         if 'game_names' in key:
             print(f'Setting game_names to {data}')
             rset('game_names', data, client_id=client.id)
+
+        if 'all_info_digest' in key:
+            all_info_digest = json.loads(data)
+            if (client_id_to_player_number_data := all_info_digest.get('client_id_to_player_number')):
+                _handle_client_id_to_player_number(client_id_to_player_number_data)
+            if (client_id_to_team_data := all_info_digest.get('client_id_to_team')):
+                _handle_client_id_to_team(client_id_to_team_data)
+            if client.game_started:
+                _handle_commands_by_player(all_info_digest.get('commands_by_player') or '{}')
+                _handle_commands_by_projectile(all_info_digest.get('commands_by_projectile') or '{}')
 
         if 'game_started' in key:
             # if data == '1':
