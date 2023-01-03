@@ -140,19 +140,13 @@ def handle_hp_loss_for_commands(game: Optional['Game'], commands_for_player: lis
     if game is not None:
         player = game.player
         commands_handled = [c.id for c in game.commands_handled]
-        # logs.append(f'Here is my player! {player}')
         if player is not None:
             for command in commands_for_player:
-                if command.type == CommandType.LOSE_HP:
-                    logs.append(f'Here is the command: {command.to_json()}')
-
                 if command.id not in commands_handled and command.client_id == client.id:
-                    # logs.append(f'Here is client id: {client.id}')
                     if command.type == CommandType.LOSE_HP:
                         assert command.data
                         verb = command.data['verb']
                         player.hp -= command.data['hp']
-                        logs.append(f'I (player {get_player_number_from_client_id(client.id, client_id=None, game_name=game_name)}) lost {command.data["hp"]} hp! I now have {player.hp} hp.')
                         game.maybe_die(player, verb, killer_id=command.data['killer_id'])
 
                         game.commands_handled.append(command)
@@ -368,21 +362,6 @@ class Game:
                                 elif event.key == pygame.K_ESCAPE:
                                     run = False
 
-                        for projectile in game_state.projectiles:
-                            if projectile_intersects_player(projectile, client_player) and not self.client.id in projectile.friends:
-                                if projectile.type == ProjectileType.ARROW:
-                                    start_of_arrow_x, start_of_arrow_y = projectile.get_start_of_arrow()
-                                    send_eat_arrow_command(self.s,
-                                                        start_of_arrow_x - client_player.x,
-                                                        start_of_arrow_y - client_player.y,
-                                                        projectile.x - client_player.x,
-                                                        projectile.y - client_player.y,
-                                                        client_id=self.client.id)
-                                    send_remove_projectile_command(self.s, projectile.id, client_id=self.client.id)
-                                    client_player.hp -= 1
-                                    verb = death_reason_to_verb(DeathReason.ARROW)
-                                    self.maybe_die(client_player, verb, projectile.player_id)
-
                         self.target = None
                         min_distance = DAGGER_RANGE
                         if client_player.weapon == Weapon.DAGGER:
@@ -400,6 +379,21 @@ class Game:
                             if distance < min_distance:
                                 self.item_target = possible_item_target
                                 min_distance = distance 
+
+                    for projectile in game_state.projectiles:
+                        if projectile_intersects_player(projectile, client_player) and not self.client.id in projectile.friends:
+                            if projectile.type == ProjectileType.ARROW:
+                                start_of_arrow_x, start_of_arrow_y = projectile.get_start_of_arrow()
+                                send_eat_arrow_command(self.s,
+                                                    start_of_arrow_x - client_player.x,
+                                                    start_of_arrow_y - client_player.y,
+                                                    projectile.x - client_player.x,
+                                                    projectile.y - client_player.y,
+                                                    client_id=self.client.id)
+                                send_remove_projectile_command(self.s, projectile.id, client_id=self.client.id)
+                                client_player.hp -= 1
+                                verb = death_reason_to_verb(DeathReason.ARROW)
+                                self.maybe_die(client_player, verb, projectile.player_id)                                
 
                 elif not self.client.ai:
                     for event in pygame.event.get():
@@ -572,7 +566,6 @@ class Game:
 
     def maybe_die(self, client_player: Player, verb: str, killer_id: int) -> None:
         if client_player.hp <= 0:
-            logs.append('Sending the die command!')
             command = send_die_command(self.s, killer_id, verb, client_id=self.client.id, game_name=self.client.game_name)                                
             message = f'Player {killer_id} {verb} you!'
             self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
