@@ -90,11 +90,11 @@ def receive_compressed_message(socket: Any) -> str:
     length_read_so_far = 0
     chunk_size = 256
     messages: list[bytes] = []
-    print(total_length_of_message)
     while length_read_so_far < total_length_of_message:
         next_chunk_length = max(min(chunk_size, total_length_of_message - length_read_so_far), 0)
-        messages.append(socket.recv(next_chunk_length))
-        length_read_so_far += next_chunk_length
+        message = socket.recv(next_chunk_length)
+        messages.append(message)
+        length_read_so_far += len(message)
     
     socket.recv(4)
     

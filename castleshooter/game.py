@@ -38,7 +38,7 @@ from utils import (
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
 import time
-from team import Team, team_to_color, rotate_team
+from team import Team, team_to_color, rotate_team, flip_team
 from garb import Garb, garb_to_pygame_image, garb_max_age
 from score import score
 from enum import Enum
@@ -118,6 +118,58 @@ class GameState:
         return GameState(players=[Player.from_json(p) for p in d['players']], 
                          projectiles=[Projectile.from_json(p) for p in d['projectiles']],
                          time=datetime.fromtimestamp(d['time']))
+
+
+def handle_commands_for_ai(game: Optional['Game'], commands_by_player: dict[int, list[str]]) -> None:
+    if game is not None:
+        client = get_client(ai_client_id=game.client.id, ai_team=game.client.team, game_name=game.client.game_name)
+        commands_by_player = get_commands_by_player(client_id=None, game_name=game.client.game_name)
+        for client_id, raw_commands_for_player in commands_by_player.items():
+            commands_for_player = [Command.from_json(json.loads(c)) for c in raw_commands_for_player]
+            if client_id == client.id:
+                handle_hp_loss_for_commands(game, commands_for_player,
+                                            ai_client_id=game.client.id, ai_team=game.client.team, game_name=game.client.game_name)
+            else:
+                handle_team_changes_for_commands_for_ai(game, commands_for_player)
+
+
+def handle_hp_loss_for_commands(game: Optional['Game'], commands_for_player: list[Command], ai_client_id: Optional[int] = None, 
+                                ai_team: Optional[Team] = None, game_name: Optional[str] = None) -> None:
+    client = get_client(ai_client_id=ai_client_id, ai_team=ai_team, game_name=game_name)
+    if game is not None:
+        player = game.player
+        commands_handled = [c.id for c in game.commands_handled]
+        if player is not None:
+            for command in commands_for_player:
+                if command.id not in commands_handled and command.client_id == client.id:
+                    if command.type == CommandType.LOSE_HP:
+                        assert command.data
+                        verb = command.data['verb']
+                        player.hp -= command.data['hp']
+                        game.maybe_die(player, verb, killer_id=command.data['killer_id'])
+
+                        game.commands_handled.append(command)
+                        game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
+
+
+def handle_team_changes_for_commands_for_ai(game: Optional['Game'], commands_for_player: list[Command]) -> None:
+    if game is not None:
+        commands_handled = [c.id for c in game.commands_handled]
+        for command in commands_for_player:
+            if command.id not in commands_handled:
+                if command.type == CommandType.DIE:
+                    assert command.data
+                    assert command.client_id
+                    player_number = get_player_number_from_client_id(command.client_id, client_id=None, game_name=game.client.game_name)
+                    team = Team(rget(f'team:{command.client_id}', client_id=None, game_name=game.client.game_name))
+                    rand = random.random()
+                    if rand < 0.05:
+                        game.player_numbers_to_putative_teams[player_number] = flip_team(team)
+                    elif rand < 0.25:
+                        game.player_numbers_to_putative_teams[player_number] = team
+
+                    game.commands_handled.append(command)
+                    game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
 
 
 class Game:

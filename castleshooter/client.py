@@ -17,7 +17,7 @@ from packet import (
 )
 import json
 from json.decoder import JSONDecodeError
-from game import Game, GameState, game_state_snapshots, run_spontaneous_game_processes
+from game import Game, GameState, game_state_snapshots, run_spontaneous_game_processes, handle_hp_loss_for_commands
 from utils import MAX_GAME_STATE_SNAPSHOTS, SNAPSHOTS_CREATED_EVERY, LOG_CUTOFF, MAX_SCORE
 from time import sleep
 import pygame
@@ -77,23 +77,6 @@ def handle_announcements_for_commands(commands_for_player: list[Command]) -> Non
                     game.add_announcement(Announcement(command_idempotency_key, datetime.now(), message))
 
 
-def handle_hp_loss_for_commands(commands_for_player: list[Command]) -> None:
-    game = get_game()
-    if game is not None:
-        player = game.player
-        if player is not None:
-            for command in commands_for_player:
-                if command.id not in [c.id for c in game.commands_handled] and command.client_id == client.id:
-                    if command.type == CommandType.LOSE_HP:
-                        assert command.data
-                        verb = command.data['verb']
-                        player.hp -= command.data['hp']
-                        game.maybe_die(player, verb, killer_id=command.data['killer_id'])
-
-                        game.commands_handled.append(command)
-                        game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
-
-
 def handle_client_changes_for_all_commands(commands_by_player: dict[int, list[str]]) -> None:
     game = get_game()
     if game is not None:
@@ -146,7 +129,7 @@ def _handle_commands_by_player(data: str) -> None:
         commands_for_player.extend(commands_for_player_from_server)
         commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]
         handle_announcements_for_commands(commands_for_player)
-        handle_hp_loss_for_commands(commands_for_player)
+        handle_hp_loss_for_commands(get_game(), commands_for_player)
         handle_client_changes_for_all_commands(commands_by_player)    
 
     for player_id, raw_commands_from_server in raw_commands_by_player_from_server.items():
@@ -159,7 +142,7 @@ def _handle_commands_by_player(data: str) -> None:
                                 if c.time > datetime.now() - timedelta(seconds=MAX_GAME_STATE_SNAPSHOTS*SNAPSHOTS_CREATED_EVERY)]
         commands_by_player[player_id] = [json.dumps(c.to_json()) for c in commands_for_player]     
         handle_announcements_for_commands(commands_for_player)   
-        handle_hp_loss_for_commands(commands_for_player)
+        handle_hp_loss_for_commands(get_game(), commands_for_player)
         handle_client_changes_for_all_commands(commands_by_player)    
 
 
