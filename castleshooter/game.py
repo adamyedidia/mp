@@ -33,7 +33,7 @@ from json.decoder import JSONDecodeError
 
 from utils import (
     MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_rectangle, GAME_HEIGHT, GAME_WIDTH, 
-    clamp, clamp_to_game_x, clamp_to_game_y, MAX_SCORE, draw_text_list, logs
+    clamp, clamp_to_game_x, clamp_to_game_y, MAX_SCORE, draw_text_list, logs, generate_random_unit_vector
 )
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
@@ -200,6 +200,8 @@ class Game:
         self.ai_last_changed_target_at = datetime.now()
         self.ai_last_gave_command_at = datetime.now()
         self.ai_target_id: Optional[int] = None
+        self.ai_last_changed_weapons_at = datetime.now()
+        self.ai_last_destination: Optional[tuple[int, int]] = None
 
 
     def run(self):
@@ -245,6 +247,9 @@ class Game:
             if self.client.game_name is not None and self.client.game_started:
                 if client_player is not None:
                     if self.client.ai:
+
+                        # Begin AI player instructions
+
                         assert self.ai_personality
                         for player in game_state.players:
                             if self.ai_target_id == player.client_id:
@@ -264,11 +269,63 @@ class Game:
                                     best_distance = distance 
                                     self.ai_last_changed_target_at = datetime.now()
 
-                        if self.ai_last_gave_command_at < datetime.now() - timedelta(milliseconds=250) and self.target is not None:
-                            send_move_command(None, self.target.x, self.target.y, client_id=self.client.id, game_name=self.client.game_name)
+                        if self.ai_last_changed_weapons_at < datetime.now() - timedelta(seconds=10):
+                            rand = random.random()
+                            if rand < 0.33:
+                                client_player.weapon = Weapon.BOW
+                                client_player.ammo = 3
+                            elif rand < 0.66:
+                                client_player.weapon = Weapon.DAGGER
+                            else:
+                                client_player.weapon = None
+                            self.ai_last_changed_weapons_at = datetime.now()
+                        
+                        def _move_randomly(client_player: Player) -> None:
+                            change_to_destination_unit_vector_x, change_to_destination_unit_vector_y = generate_random_unit_vector()
+                            change_to_destination_distance = 10
+                            change_to_destination = (int(change_to_destination_distance * change_to_destination_unit_vector_x),
+                                                        int(change_to_destination_distance * change_to_destination_unit_vector_y))
+                            last_destination = self.ai_last_destination or (client_player.x, client_player.y)
+                            new_destination = (change_to_destination[0] + last_destination[0], change_to_destination[1] + last_destination[1])
+                            
+                            send_move_command(None, new_destination[0], new_destination[1], client_id=self.client.id, game_name=self.client.game_name)
+                            self.ai_last_destination = new_destination
+
+                        target = self.target
+                        if self.ai_last_gave_command_at < datetime.now() - timedelta(milliseconds=500):
+                            distance_to_target = sqrt((client_player.x - target.x)**2 + (client_player.y - target.y)**2) if target is not None else None
+                            if client_player.weapon is None:
+                                _move_randomly(client_player)
+                            elif client_player.weapon == Weapon.BOW:
+                                if distance_to_target is not None and target is not None:
+                                    if distance_to_target < 200:
+                                        if random.random() < 0.5:
+                                            # Run away from target
+                                            send_move_command(None, 2 * client_player.x - target.x, 2 * client_player.y - target.y, client_id=self.client.id, game_name=self.client.game_name)
+                                        else:
+                                            self.shoot_bow(client_player, target.x, target.y)
+                                    elif distance_to_target < 300:
+                                        self.shoot_bow(client_player, target.x, target.y)
+                                    else:
+                                        # Approach target
+                                        send_move_command(None, target.x, target.y, client_id=self.client.id, game_name=self.client.game_name)            
+                                else:
+                                    _move_randomly(client_player)
+                            elif client_player.weapon == Weapon.DAGGER:
+                                if target is not None:
+                                    if self.can_stab(client_player, target):
+                                        self.stab(client_player, target)
+                                    else:
+                                        # Approach target
+                                        send_move_command(None, target.x, target.y, client_id=self.client.id, game_name=self.client.game_name)                                        
+                                else:
+                                    _move_randomly(client_player)
+
                             self.ai_last_gave_command_at = datetime.now()
 
                         handle_commands_for_ai(self, get_commands_by_player(client_id=None, game_name=self.client.game_name))
+
+                        # End AI player instructions
                                 
                     else:
                         x_offset = int(client_player.x - self.width / 2)
@@ -386,6 +443,12 @@ class Game:
                         if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                             assert self.client.team
                             send_spawn_command(self.s, random.randint(1, GAME_WIDTH - 1), random.randint(1, GAME_HEIGHT - 1), self.client.team, client_id=self.client.id)
+
+                elif self.ai_last_gave_command_at < datetime.now() - timedelta(milliseconds=500):
+                    # An AI player is dead, and needs to send a spawn command
+                    assert self.client.team
+                    send_spawn_command(self.s, random.randint(1, GAME_WIDTH - 1), random.randint(1, GAME_HEIGHT - 1), self.client.team, client_id=self.client.id, game_name=self.client.game_name)
+                    self.ai_last_gave_command_at = datetime.now()
         
             elif self.client.game_name is None and not self.client.game_started and not self.client.ai:
                 for event in pygame.event.get():
