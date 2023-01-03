@@ -293,9 +293,7 @@ class Game:
                                             mouse_x, mouse_y = pygame.mouse.get_pos()
                                             self.shoot_bow(client_player, mouse_x + x_offset, mouse_y + y_offset)
                                         elif client_player.weapon == Weapon.DAGGER and target is not None:
-                                            send_lose_hp_command(self.s, client_player.client_id, target.client_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=self.client.id)
-                                            send_teleport_command(self.s, target.x, target.y, client_id=self.client.id)
-                                            client_player.weapon = None
+                                            self.stab(client_player, target)
                                         elif client_player.weapon == Weapon.FLASHLIGHT:
                                             mouse_x, mouse_y = pygame.mouse.get_pos()
                                             triangle = get_flashlight_triangle(client_player.x, client_player.y, mouse_x + x_offset, mouse_y + y_offset)
@@ -341,9 +339,8 @@ class Game:
                                     if shift_pressed and number_pressed is not None and client_player.weapon == Weapon.DAGGER:
                                         pressed_target_id = number_pressed
                                         for pressed_target in game_state.players:
-                                            if pressed_target.client_id == pressed_target_id and sqrt((pressed_target.x - client_player.x)**2 + (pressed_target.y - client_player.y)**2) < DAGGER_RANGE:
-                                                send_lose_hp_command(self.s, client_player.client_id, pressed_target_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=self.client.id)
-                                                send_teleport_command(self.s, pressed_target.x, pressed_target.y, client_id=self.client.id)
+                                            if pressed_target.client_id == pressed_target_id and self.can_stab(client_player, pressed_target):
+                                                self.stab(client_player, pressed_target)
                                     elif not shift_pressed and number_pressed is not None and self.client.team is not None:
                                         self.player_numbers_to_putative_teams[number_pressed] = rotate_team(self.player_numbers_to_putative_teams.get(number_pressed), self.client.team)
 
@@ -575,6 +572,14 @@ class Game:
         client_player.ammo -= 1
         if client_player.ammo <= 0:
             client_player.weapon = None
+
+    def can_stab(self, client_player: Player, target: Player) -> bool:
+        return sqrt((target.x - client_player.x)**2 + (target.y - client_player.y)**2) < DAGGER_RANGE
+
+    def stab(self, client_player: Player, target: Player) -> None:
+        send_lose_hp_command(self.s, client_player.client_id, target.client_id, death_reason_to_verb(DeathReason.DAGGER), 2, client_id=self.client.id, game_name=self.client.game_name)
+        send_teleport_command(self.s, target.x, target.y, client_id=self.client.id, game_name=self.client.game_name)
+        client_player.weapon = None
 
     def add_announcement(self, annoucement: Announcement) -> None:
         self.announcements = [a for a in self.announcements if a.time > datetime.now() - timedelta(seconds=15)]
