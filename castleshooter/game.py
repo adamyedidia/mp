@@ -143,9 +143,11 @@ def handle_hp_loss_for_commands(game: Optional['Game'], commands_for_player: lis
         # logs.append(f'Here is my player! {player}')
         if player is not None:
             for command in commands_for_player:
-                # logs.append(f'Here is the command: {command.to_json()}')
+                if command.type == CommandType.LOSE_HP:
+                    logs.append(f'Here is the command: {command.to_json()}')
+
                 if command.id not in commands_handled and command.client_id == client.id:
-                    logs.append(f'Here is client id: {client.id}')
+                    # logs.append(f'Here is client id: {client.id}')
                     if command.type == CommandType.LOSE_HP:
                         assert command.data
                         verb = command.data['verb']
