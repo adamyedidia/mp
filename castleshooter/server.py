@@ -312,6 +312,7 @@ def _create_game_state_snaps(game_name: str) -> None:
 
 
 def _broadcast_digest(connection: Connection, game_name: str) -> None:
+    sleep(3)
     while True:
         all_info_digest = {
             "commands_by_player": rget("commands_by_player", client_id=None, game_name=game_name) or "{}",
@@ -323,7 +324,7 @@ def _broadcast_digest(connection: Connection, game_name: str) -> None:
         }
 
         send_without_retry(connection.conn, f'all_info_digest|{json.dumps(all_info_digest)}', client_id=None)
-        sleep(0.1)
+        sleep(0.25)
 
     # while True:
     #     active_players = game_state.get_active_players()
