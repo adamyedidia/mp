@@ -33,7 +33,7 @@ from json.decoder import JSONDecodeError
 
 from utils import (
     MAX_GAME_STATE_SNAPSHOTS, LOG_CUTOFF, draw_text_centered_on_rectangle, GAME_HEIGHT, GAME_WIDTH, 
-    clamp, clamp_to_game_x, clamp_to_game_y, MAX_SCORE, draw_text_list
+    clamp, clamp_to_game_x, clamp_to_game_y, MAX_SCORE, draw_text_list, logs
 )
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
@@ -146,6 +146,7 @@ def handle_hp_loss_for_commands(game: Optional['Game'], commands_for_player: lis
                         assert command.data
                         verb = command.data['verb']
                         player.hp -= command.data['hp']
+                        logs.append(f'I (player {client.player_number}) lost {command.data["hp"]} hp! I now have {player.hp} hp.')
                         game.maybe_die(player, verb, killer_id=command.data['killer_id'])
 
                         game.commands_handled.append(command)
