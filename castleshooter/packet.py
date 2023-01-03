@@ -73,11 +73,14 @@ def packet_handled_redis_key(packet_id: int, *, for_client: Optional[int]) -> st
 
 
 def receive_compressed_message(socket: Any) -> str:
-    preamble = socket.recv(12).decode()
-    if preamble[:4] != '[[[[':
+    prepreamble = socket.recv(1).decode()
+    if prepreamble != '[':
+        return ''
+    preamble = socket.recv(11).decode()
+    if preamble[:3] != '[[[':
         return ''
     
-    total_length_of_message = int(preamble[4:])
+    total_length_of_message = int(preamble[3:])
     length_read_so_far = 0
     chunk_size = 256
     messages: list[bytes] = []
