@@ -152,7 +152,7 @@ def handle_hp_loss_for_commands(game: Optional['Game'], commands_for_player: lis
                         assert command.data
                         verb = command.data['verb']
                         player.hp -= command.data['hp']
-                        logs.append(f'I (player {client.player_number}) lost {command.data["hp"]} hp! I now have {player.hp} hp.')
+                        logs.append(f'I (player {get_player_number_from_client_id(client.id, client_id=None, game_name=game_name)}) lost {command.data["hp"]} hp! I now have {player.hp} hp.')
                         game.maybe_die(player, verb, killer_id=command.data['killer_id'])
 
                         game.commands_handled.append(command)
@@ -572,6 +572,7 @@ class Game:
 
     def maybe_die(self, client_player: Player, verb: str, killer_id: int) -> None:
         if client_player.hp <= 0:
+            logs.append('Sending the die command!')
             command = send_die_command(self.s, killer_id, verb, client_id=self.client.id)                                
             message = f'Player {killer_id} {verb} you!'
             self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
