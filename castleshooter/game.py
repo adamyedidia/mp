@@ -389,8 +389,9 @@ class Game:
                                                     start_of_arrow_y - client_player.y,
                                                     projectile.x - client_player.x,
                                                     projectile.y - client_player.y,
-                                                    client_id=self.client.id)
-                                send_remove_projectile_command(self.s, projectile.id, client_id=self.client.id)
+                                                    client_id=self.client.id,
+                                                    game_name=self.client.game_name)
+                                send_remove_projectile_command(self.s, projectile.id, client_id=self.client.id, game_name=self.client.game_name)
                                 client_player.hp -= 1
                                 verb = death_reason_to_verb(DeathReason.ARROW)
                                 self.maybe_die(client_player, verb, projectile.player_id)                                
