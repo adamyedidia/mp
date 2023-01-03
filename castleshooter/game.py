@@ -573,7 +573,7 @@ class Game:
     def maybe_die(self, client_player: Player, verb: str, killer_id: int) -> None:
         if client_player.hp <= 0:
             logs.append('Sending the die command!')
-            command = send_die_command(self.s, killer_id, verb, client_id=self.client.id)                                
+            command = send_die_command(self.s, killer_id, verb, client_id=self.client.id, game_name=self.client.game_name)                                
             message = f'Player {killer_id} {verb} you!'
             self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
                                                 datetime.now(), message))
