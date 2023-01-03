@@ -112,7 +112,20 @@ def handle_client_changes_for_all_commands(commands_by_player: dict[int, list[st
                             game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
 
 
-def _handle_commands_by_player(data: str):
+def _handle_most_recent_game_snapshot(data: str) -> None:
+    if not data:
+        return
+    try:
+        json.loads(data)
+    except JSONDecodeError as e:
+        print(f'Ignoring unparseable snap from server: {data[:LOG_CUTOFF]}')
+        return
+    game_state_snapshots.append(data)
+    if len(game_state_snapshots) > MAX_GAME_STATE_SNAPSHOTS:
+        del game_state_snapshots[0]
+
+
+def _handle_commands_by_player(data: str) -> None:
     raw_commands_by_player = get_commands_by_player(client_id=client.id)
     raw_commands_by_player_from_server = {int(key): val for key, val in json.loads(data).items()}
     player_ids_handled: set[int] = set()
@@ -204,14 +217,7 @@ def _handle_payload_from_server(payload: str) -> None:
         key, data = payload.split('|')
 
         if 'most_recent_game_state_snapshot' in key:
-            try:
-                json.loads(data)
-            except JSONDecodeError as e:
-                print(f'Ignoring unparseable snap from server: {data[:LOG_CUTOFF]}')
-                return
-            game_state_snapshots.append(data)
-            if len(game_state_snapshots) > MAX_GAME_STATE_SNAPSHOTS:
-                del game_state_snapshots[0]
+            _handle_most_recent_game_snapshot(data)
 
         if 'commands_by_player' in key:
             _handle_commands_by_player(data)
@@ -234,11 +240,13 @@ def _handle_payload_from_server(payload: str) -> None:
 
         if 'all_info_digest' in key:
             all_info_digest = json.loads(data)
-            if (client_id_to_player_number_data := all_info_digest.get('client_id_to_player_number')):
-                _handle_client_id_to_player_number(client_id_to_player_number_data)
-            if (client_id_to_team_data := all_info_digest.get('client_id_to_team')):
-                _handle_client_id_to_team(client_id_to_team_data)
-            if client.game_started:
+            if not client.game_started:
+                if (client_id_to_player_number_data := all_info_digest.get('client_id_to_player_number')):
+                    _handle_client_id_to_player_number(client_id_to_player_number_data)
+                if (client_id_to_team_data := all_info_digest.get('client_id_to_team')):
+                    _handle_client_id_to_team(client_id_to_team_data)
+            else:
+                _handle_most_recent_game_snapshot(all_info_digest.get('most_recent_game_snapshot') or '')
                 _handle_commands_by_player(all_info_digest.get('commands_by_player') or '{}')
                 _handle_commands_by_projectile(all_info_digest.get('commands_by_projectile') or '{}')
 
