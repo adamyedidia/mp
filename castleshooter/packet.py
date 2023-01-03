@@ -127,6 +127,7 @@ def send_without_retry(conn: Any, message: str, *, client_id: Optional[int]) -> 
     else:
         packet = Packet(client_id=client_id, payload=message)
         # print(f'Sending without retry {packet}')    
+        print(len(zlib.compress(bytes(packet.to_str(), 'utf-8'))))
         conn.sendall(zlib.compress(bytes(packet.to_str(), 'utf-8')))
 
 
