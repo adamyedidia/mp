@@ -1,5 +1,8 @@
 from typing import Any, Optional
 
+from math import sin, cos, pi
+import random
+
 import pygame
 
 MAX_GAME_STATE_SNAPSHOTS = 5
@@ -74,3 +77,8 @@ def clamp_to_game_y(y: int) -> int:
 
 
 logs = []
+
+
+def generate_random_unit_vector() -> tuple[float, float]:
+    theta = random.random() * 2*pi
+    return cos(theta), sin(theta)
