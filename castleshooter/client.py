@@ -12,7 +12,8 @@ from threading import Thread
 from client_utils import get_player_number_from_client_id
 from client_utils import _client as client
 from packet import (
-    Packet, send_ack, send_spawn_command, send_without_retry, packet_ack_redis_key, packet_handled_redis_key, send_with_retry
+    Packet, send_ack, send_spawn_command, send_without_retry, packet_ack_redis_key, packet_handled_redis_key, send_with_retry,
+    receive_compressed_message
 )
 import json
 from json.decoder import JSONDecodeError
@@ -308,8 +309,7 @@ def listen_for_server_updates(socket: Any, client_id_only: bool = False) -> None
         global stored_data
         try:
             # 1048576
-            print(len(socket.recv(65536)))
-            raw_data = zlib.decompress(socket.recv(65536)).decode()
+            raw_data = receive_compressed_message(socket)
         except Exception as e:
             print(f'Error decompressing data: {e}')
             traceback.print_exc()

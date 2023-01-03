@@ -13,7 +13,7 @@ from _thread import start_new_thread
 from time import sleep
 from packet import (
     Packet, send_with_retry, send_without_retry, send_ack, packet_ack_redis_key, 
-    packet_handled_redis_key, send_with_retry_on_delay
+    packet_handled_redis_key, send_with_retry_on_delay, receive_compressed_message
 )
 import game
 import random
@@ -266,7 +266,7 @@ def _handle_incoming_connection(connection: Connection, game_state: GameState, g
     print(f'handling incoming connection! ({for_client_id, game_name})')
     while True:
         try:
-            data = zlib.decompress(connection.conn.recv(1048576)).decode()
+            data = receive_compressed_message(connection.conn)
         except Exception as e:
             print(f'Error decompressing data: {e}')
             data = ''
