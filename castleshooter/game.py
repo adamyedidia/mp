@@ -121,7 +121,7 @@ class GameState:
 
 
 def handle_commands_for_ai(game: Optional['Game'], commands_by_player: dict[int, list[str]]) -> None:
-    logs.append(f'Handling commands for AI! {game}')
+    # logs.append(f'Handling commands for AI! {game}')
     if game is not None:
         client = get_client(ai_client_id=game.client.id, ai_team=game.client.team, game_name=game.client.game_name)
         commands_by_player = get_commands_by_player(client_id=None, game_name=game.client.game_name)
@@ -140,11 +140,12 @@ def handle_hp_loss_for_commands(game: Optional['Game'], commands_for_player: lis
     if game is not None:
         player = game.player
         commands_handled = [c.id for c in game.commands_handled]
-        logs.append(f'Here is my player! {player}')
+        # logs.append(f'Here is my player! {player}')
         if player is not None:
             for command in commands_for_player:
-                logs.append(f'Here is the command: {command.to_json()}')
+                # logs.append(f'Here is the command: {command.to_json()}')
                 if command.id not in commands_handled and command.client_id == client.id:
+                    logs.append(f'Here is client id: {client.id}')
                     if command.type == CommandType.LOSE_HP:
                         assert command.data
                         verb = command.data['verb']
