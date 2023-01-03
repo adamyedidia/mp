@@ -15,7 +15,7 @@ from garb import Garb
 
 from utils import to_optional_int, draw_text_centered_on_rectangle
 
-BASE_MAX_HP = 4
+BASE_MAX_HP = 2
 
 class Player():
     def __init__(self, client_id: int, startx: int, starty: int, team: Team, player_number: int, 
