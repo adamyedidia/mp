@@ -1,8 +1,14 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import random
 
 from enum import Enum
+if TYPE_CHECKING:
+    from player import Player
 
+from redis_utils import rget
+from client_utils import get_player_number_from_client_id
+
+import json
 
 class Team(Enum):
     RED = 'red'
@@ -39,3 +45,15 @@ def rotate_team(current_team: Optional[Team], my_team: Team) -> Optional[Team]:
         return flip_team(current_team)
     else:
         return None
+
+
+def get_true_teams(client_id: Optional[int], game_name: Optional[str] = None, exclude_my_client_id: Optional[int] = None) -> dict[Team, list[int]]:
+    red_team_cid = [cid for cid in json.loads(rget('red_team', client_id=client_id, game_name=game_name) or '[]') if cid != exclude_my_client_id]
+    assert red_team_cid
+    blue_team_cid = [cid for cid in json.loads(rget('blue_team', client_id=client_id, game_name=game_name) or '[]') if cid != exclude_my_client_id]
+    assert blue_team_cid
+
+    return {
+        Team.RED: [get_player_number_from_client_id(cid, client_id=client_id, game_name=game_name) for cid in red_team_cid], 
+        Team.BLUE: [get_player_number_from_client_id(cid, client_id=client_id, game_name=game_name) for cid in blue_team_cid],
+    }

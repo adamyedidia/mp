@@ -150,6 +150,7 @@ class GameState:
                     client_id_to_team: dict[int, Team] = {}
                     client_id_to_player_number: dict[int, int] = {}
                     red_team = random.sample(client_ids_in_game, 4)
+                    blue_team = [cid for cid in client_ids_in_game if cid not in red_team]
                     for i, client_id in enumerate(client_ids_in_game):
                         if client_id in red_team:
                             team = Team.RED
@@ -161,6 +162,9 @@ class GameState:
                         rset(f'team:{client_id}', team.value, client_id=None, game_name=game_name)
                         rset(f'player_number:{client_id}', player_number, client_id=None, game_name=game_name)
                         rset(f'client_id:{player_number}', client_id, client_id=None, game_name=game_name)
+
+                    rset(f'red_team', json.dumps(red_team), client_id=None, game_name=game_name)
+                    rset(f'blue_team', json.dumps(blue_team), client_id=None, game_name=game_name)
 
                     sleep(0.1)
                     rset('client_id_to_team', json.dumps({k: v.value for k, v in client_id_to_team.items()}), client_id=None, game_name=game_name)
