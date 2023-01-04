@@ -66,7 +66,7 @@ def handle_announcements_for_commands(commands_for_player: list[Command]) -> Non
                     assert command.data
                     assert command.client_id
                     verb = command.data['verb']
-                    killer_id = int(command.data['killer_id'])
+                    killer_id = get_player_number_from_client_id(int(command.data['killer_id']), client_id=client.id)
                     victim_id = get_player_number_from_client_id(command.client_id, client_id=client.id)
                     if victim_id == client.id:
                         message = f'Player {killer_id} {verb} you!'

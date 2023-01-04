@@ -627,7 +627,7 @@ class Game:
         arrow_dest_x = client_player.x + int(unit_vector_from_player_to_mouse[0] * arrow_distance)
         arrow_dest_y = client_player.y + int(unit_vector_from_player_to_mouse[1] * arrow_distance)
         send_spawn_projectile_command(self.s, generate_projectile_id(), client_player.x, client_player.y, arrow_dest_x, arrow_dest_y, 
-                                    [self.client.id, *[get_client_id_from_player_number(player_number, client_id=self.client.id) 
+                                    [self.client.id, *[get_client_id_from_player_number(player_number, client_id=self.client.id, game_name=self.client.game_name) 
                                     for player_number in self.player_numbers_to_putative_teams.keys() 
                                     if self.player_numbers_to_putative_teams.get(player_number) == self.client.team]], 
                                     type=ProjectileType.ARROW, client_id=self.client.id, game_name=self.client.game_name)
