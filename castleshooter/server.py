@@ -180,7 +180,8 @@ class GameState:
                     start_new_thread(_create_game_state_snaps, (game_name,))
 
                     for i, client_id in enumerate(client_ids_in_game):
-                        if client_id > 10000:
+                        if client_id >= 10000:
+                            print(f'Starting up an AI: {client_id_to_player_number[client_id]}')
                             start_new_thread(start_up_game_for_ai, (client_id, client_id_to_team[client_id], game_name))
             return True
 
@@ -201,14 +202,14 @@ class GameState:
         return False
             
     def _handle_datum(self, connection: Connection, datum: str, game_name: str) -> None:
-        print(f'received: {datum[:LOG_CUTOFF]}\n')
+        # print(f'received: {datum[:LOG_CUTOFF]}\n')
         packet = Packet.from_str(datum)
         packet_id = packet.id
         payload = packet.payload
         if packet.is_ack:
             assert packet_id is not None
             # Record in redis that the message has been acked
-            print(f'Received ack for {packet}')
+            # print(f'Received ack for {packet}')
             rset(packet_ack_redis_key(packet_id), '1', client_id=None, game_name=game_name)
         elif packet_id is None:
             assert payload is not None
@@ -227,9 +228,11 @@ class GameState:
                         send_ack(connection.conn, packet_id)
                         rset(handled_redis_key, '1', client_id=None, game_name=game_name)
                     else:
-                        print(f"Ignoring {packet} because we're not supposed to handle this one")
+                        pass
+                        # print(f"Ignoring {packet} because we're not supposed to handle this one")
                 else:
-                    print(f'Ignoring {packet} because this packet has already been handled')
+                    pass
+                    # print(f'Ignoring {packet} because this packet has already been handled')
 
     def handle_data_from_client(self, raw_data: str, connection: Connection, game_name: str) -> None:
         for datum in raw_data.split(';'):
