@@ -1,5 +1,6 @@
-from typing import Optional
-from team import Team
+from typing import Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from team import Team
 
 from redis_utils import rget
 
@@ -7,7 +8,7 @@ from redis_utils import rget
 class Client:
     def __init__(self) -> None:
         self.id = -1
-        self.team: Optional[Team] = None
+        self.team: Optional['Team'] = None
         self.player_number: Optional[int] = None
         self.game_started: bool = False
         self.game_name: Optional[str] = None
@@ -16,7 +17,7 @@ class Client:
     def set_id(self, id: int) -> None:
         self.id = id
 
-    def set_team(self, team: Team) -> None:
+    def set_team(self, team: 'Team') -> None:
         self.team = team
 
     def set_player_number(self, player_number: int) -> None:
@@ -32,7 +33,7 @@ class Client:
 _client = Client()
 
 
-def get_client(ai_client_id: Optional[int] = None, ai_team: Optional[Team] = None, game_name: Optional[str] = None) -> Client:
+def get_client(ai_client_id: Optional[int] = None, ai_team: Optional['Team'] = None, game_name: Optional[str] = None) -> Client:
     if ai_client_id is None:
         return _client
     assert ai_team

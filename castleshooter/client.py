@@ -188,11 +188,19 @@ def _handle_client_id_to_player_number(data: str) -> None:
 
 def _handle_client_id_to_team(data: str) -> None:
     client_id_to_team = json.loads(data)
+    red_team = []
+    blue_team = []
     for client_id, team in client_id_to_team.items():
+        if team == Team.RED.value:
+            red_team.append(client_id)
+        else:
+            blue_team.append(client_id)
         rset(f'team:{client_id}', team, client_id=client.id)
         if int(client_id) == int(client.id):
             print(f'Setting team to {team}')
             client.set_team(Team(team))
+    rset(f'red_team', json.dumps(red_team), client_id=client.id)
+    rset(f'blue_team', json.dumps(blue_team), client_id=client.id)
 
 
 def _handle_payload_from_server(payload: str) -> None:
@@ -247,7 +255,7 @@ stored_data: list[str] = []
 
 
 def _start_game_on_delay():
-    sleep(3)
+    sleep(1)
     client.set_game_started(True)
 
 

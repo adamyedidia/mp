@@ -38,7 +38,7 @@ from utils import (
 from item import Item, ItemCategory, ItemType, generate_next_item_id
 from time import sleep
 import time
-from team import Team, team_to_color, rotate_team, flip_team
+from team import Team, team_to_color, rotate_team, flip_team, get_true_teams
 from garb import Garb, garb_to_pygame_image, garb_max_age
 from score import score
 from enum import Enum
@@ -245,6 +245,19 @@ class Game:
             y_offset: Optional[int] = None
 
             if self.client.game_name is not None and self.client.game_started:
+                if not self.player_numbers_to_putative_teams and self.client.team:
+                    # Initial team info: two independent 75% chance of being enemy
+                    true_teams = get_true_teams(client_id=None if self.client.ai else self.client.id, game_name=self.client.game_name, exclude_my_client_id=self.client.id)
+                    if random.random() < 1 / 16:
+                        enemies = random.sample(true_teams[self.client.team], 2)
+                    elif random.random() < 7 / 16:
+                        enemies = [*random.sample(true_teams[flip_team(self.client.team)], 1),
+                                   *random.sample(true_teams[self.client.team], 1)]
+                    else:
+                        enemies = random.sample(true_teams[flip_team(self.client.team)], 2)
+                    for enemy in enemies:
+                        self.player_numbers_to_putative_teams[enemy] = flip_team(self.client.team)
+
                 if client_player is not None:
                     if self.client.ai:
 
