@@ -121,7 +121,6 @@ class GameState:
 
 
 def handle_commands_for_ai(game: Optional['Game'], commands_by_player: dict[int, list[str]]) -> None:
-    # logs.append(f'Handling commands for AI! {game}')
     if game is not None:
         client = get_client(ai_client_id=game.client.id, ai_team=game.client.team, game_name=game.client.game_name)
         commands_by_player = get_commands_by_player(client_id=None, game_name=game.client.game_name)

@@ -335,7 +335,7 @@ def _broadcast_digest(connection: Connection, game_name: str) -> None:
         send_without_retry(connection.conn, f'all_info_digest|{json.dumps(all_info_digest)}', client_id=None)
         newline = "\n"
         print(f'Logs: {newline.join(logs)}')
-        sleep(0.25)
+        sleep(0.05)
 
     # while True:
     #     active_players = game_state.get_active_players()
