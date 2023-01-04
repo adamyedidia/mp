@@ -150,7 +150,7 @@ def handle_hp_loss_for_commands(game: Optional['Game'], commands_for_player: lis
                         game.maybe_die(player, verb, killer_id=command.data['killer_id'])
 
                         game.commands_handled.append(command)
-                        game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
+                        game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=40)]
 
 
 def handle_team_changes_for_commands_for_ai(game: Optional['Game'], commands_for_player: list[Command]) -> None:
@@ -170,7 +170,7 @@ def handle_team_changes_for_commands_for_ai(game: Optional['Game'], commands_for
                         game.player_numbers_to_putative_teams[player_number] = team
 
                     game.commands_handled.append(command)
-                    game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=20)]
+                    game.commands_handled = [c for c in game.commands_handled if c.time > datetime.now() - timedelta(seconds=40)]
 
 
 class Game:
@@ -504,8 +504,8 @@ class Game:
                     mouse_x, mouse_y = pygame.mouse.get_pos()
                     vector_from_player_to_mouse = (mouse_x - client_player.x + x_offset, mouse_y - client_player.y + y_offset)
                     vector_from_player_to_mouse_mag = math.sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
-                    unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
-                                                        vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
+                    unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / (vector_from_player_to_mouse_mag + 0.00001),
+                                                        vector_from_player_to_mouse[1] / (vector_from_player_to_mouse_mag + 0.00001))
                     
                     if client_player.weapon == Weapon.BOW:
                         unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x - x_offset, client_player.y - y_offset, mouse_x, mouse_y)
@@ -613,13 +613,15 @@ class Game:
             canvas.blit(image_surface, (current_x, current_y))
             current_x += 75
 
-    def maybe_die(self, client_player: Player, verb: str, killer_id: int) -> None:
+    def maybe_die(self, client_player: Player, verb: str, killer_id: int) -> bool:
         if client_player.hp <= 0:
             command = send_die_command(self.s, killer_id, verb, client_id=self.client.id, game_name=self.client.game_name)                                
             message = f'Player {get_player_number_from_client_id(killer_id, client_id=self.client.id, game_name=self.client.game_name)} {verb} you!'
             self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
                                                 datetime.now(), message))
             self.player = None        
+            return True
+        return False
 
     def shoot_bow(self, client_player: Player, dest_x: int, dest_y: int) -> None:
         unit_vector_from_player_to_mouse = get_unit_vector_from_player_to_mouse(client_player.x, client_player.y, dest_x, dest_y)
