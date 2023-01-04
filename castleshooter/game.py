@@ -616,7 +616,7 @@ class Game:
     def maybe_die(self, client_player: Player, verb: str, killer_id: int) -> None:
         if client_player.hp <= 0:
             command = send_die_command(self.s, killer_id, verb, client_id=self.client.id, game_name=self.client.game_name)                                
-            message = f'Player {killer_id} {verb} you!'
+            message = f'Player {get_player_number_from_client_id(killer_id, client_id=self.client.id, game_name=self.client.game_name)} {verb} you!'
             self.add_announcement(Announcement(get_announcement_idempotency_key_for_command(command), 
                                                 datetime.now(), message))
             self.player = None        
