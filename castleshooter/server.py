@@ -329,7 +329,8 @@ def _broadcast_digest(connection: Connection, game_name: str) -> None:
         }
 
         send_without_retry(connection.conn, f'all_info_digest|{json.dumps(all_info_digest)}', client_id=None)
-        print(f'Logs: {logs}')
+        newline = "\n"
+        print(f'Logs: {newline.join(logs)}')
         sleep(0.25)
 
     # while True:

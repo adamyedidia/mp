@@ -5,8 +5,8 @@ FLASHLIGHT_COLOR = (255, 255, 0)
 def get_unit_vector_from_player_to_mouse(player_x: int, player_y: int, mouse_x: int, mouse_y: int):
     vector_from_player_to_mouse = (mouse_x - player_x, mouse_y - player_y)
     vector_from_player_to_mouse_mag = sqrt(vector_from_player_to_mouse[0]**2 + vector_from_player_to_mouse[1]**2)
-    unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / vector_from_player_to_mouse_mag,
-                                        vector_from_player_to_mouse[1] / vector_from_player_to_mouse_mag)
+    unit_vector_from_player_to_mouse = (vector_from_player_to_mouse[0] / (vector_from_player_to_mouse_mag + 0.0001),
+                                        vector_from_player_to_mouse[1] / (vector_from_player_to_mouse_mag + 0.0001))
     return unit_vector_from_player_to_mouse
 
 
